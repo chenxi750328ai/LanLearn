@@ -11,6 +11,8 @@ from es_app.errors import register_exception_handlers
 from es_app.exam.router import get_exam_service
 from es_app.exam.router import router as exam_router
 from es_app.exam.service import ExamService
+from es_app.adapters.fake_ocr import FakeOcr
+from es_app.adapters.tesseract_ocr import TesseractOcr, tesseract_available
 from es_app.ingest.router import get_ingest_service
 from es_app.ingest.router import router as ingest_router
 from es_app.ingest.service import IngestService
@@ -40,7 +42,8 @@ def create_app() -> FastAPI:
 
     lexicon_store = LexiconStore(conn)
     lexicon_service = LexiconService(lexicon_store)
-    ingest_service = IngestService(lexicon_service)
+    ocr = TesseractOcr() if tesseract_available() else FakeOcr(text="")
+    ingest_service = IngestService(lexicon_service, ocr=ocr)
     seed_builtin_toefl(lexicon_service)
     plan_service = PlanService(conn, lexicon_store)
     study_service = StudyService(conn, lexicon_store, plan_service)

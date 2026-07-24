@@ -243,6 +243,25 @@
     $("btn-import-confirm").disabled = data.candidates.length === 0;
   }
 
+  async function uploadImportImage() {
+    const input = $("import-image");
+    const file = input.files?.[0];
+    if (!file) {
+      showToast("请选择图片文件", true);
+      return;
+    }
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const data = await api("/ingest/image", { method: "POST", body: form });
+      state.importCandidates = data.candidates;
+      renderImportPreview({ candidates: data.candidates, failures: [] });
+      showToast(`OCR 解析 ${data.candidates.length} 条候选`);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  }
+
   async function uploadImportFile() {
     const input = $("import-file");
     const file = input.files?.[0];
@@ -285,6 +304,7 @@
   $("exam-form").addEventListener("submit", submitExam);
   $("btn-refresh-progress").addEventListener("click", refreshProgress);
   $("btn-import-upload").addEventListener("click", uploadImportFile);
+  $("btn-import-image").addEventListener("click", uploadImportImage);
   $("btn-import-confirm").addEventListener("click", confirmImport);
 
   refreshProgress();
