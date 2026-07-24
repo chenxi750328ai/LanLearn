@@ -8,6 +8,7 @@
     studySession: null,
     cardIndex: 0,
     examSession: null,
+    importCandidates: [],
   };
 
   const $ = (id) => document.getElementById(id);
@@ -22,10 +23,11 @@
   }
 
   async function api(path, opts) {
-    const res = await fetch(API + path, {
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      ...opts,
-    });
+    const headers = { Accept: "application/json", ...(opts?.headers || {}) };
+    if (opts?.body && !(opts.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
+    const res = await fetch(API + path, { ...opts, headers });
     const body = res.headers.get("content-type")?.includes("json")
       ? await res.json()
       : null;
@@ -224,11 +226,66 @@
     }
   }
 
+  function renderImportPreview(data) {
+    const box = $("import-preview");
+    box.classList.remove("hidden");
+    const failText = data.failures.length
+      ? `<br>失败 ${data.failures.length} 行`
+      : "";
+    box.innerHTML =
+      `<strong>候选 ${data.candidates.length} 条</strong>${failText}` +
+      (data.candidates.length
+        ? `<br>${data.candidates
+            .slice(0, 5)
+            .map((c) => c.word)
+            .join(", ")}${data.candidates.length > 5 ? "…" : ""}`
+        : "");
+    $("btn-import-confirm").disabled = data.candidates.length === 0;
+  }
+
+  async function uploadImportFile() {
+    const input = $("import-file");
+    const file = input.files?.[0];
+    if (!file) {
+      showToast("请选择 CSV 或 TXT 文件", true);
+      return;
+    }
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const data = await api("/ingest/file", { method: "POST", body: form });
+      state.importCandidates = data.candidates;
+      renderImportPreview(data);
+      showToast(`已解析 ${data.candidates.length} 条候选`);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  }
+
+  async function confirmImport() {
+    if (!state.importCandidates.length) return;
+    try {
+      const words = await api("/ingest/confirm", {
+        method: "POST",
+        body: JSON.stringify({ candidates: state.importCandidates }),
+      });
+      state.importCandidates = [];
+      $("btn-import-confirm").disabled = true;
+      $("import-file").value = "";
+      renderImportPreview({ candidates: [], failures: [] });
+      showToast(`已入库 ${words.length} 条`);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  }
+
   $("btn-create-plan").addEventListener("click", createPlan);
   $("btn-start-study").addEventListener("click", startStudy);
   $("btn-start-exam").addEventListener("click", startExam);
   $("exam-form").addEventListener("submit", submitExam);
   $("btn-refresh-progress").addEventListener("click", refreshProgress);
+  $("btn-import-upload").addEventListener("click", uploadImportFile);
+  $("btn-import-confirm").addEventListener("click", confirmImport);
 
   refreshProgress();
 })();

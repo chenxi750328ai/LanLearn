@@ -11,6 +11,9 @@ from es_app.errors import register_exception_handlers
 from es_app.exam.router import get_exam_service
 from es_app.exam.router import router as exam_router
 from es_app.exam.service import ExamService
+from es_app.ingest.router import get_ingest_service
+from es_app.ingest.router import router as ingest_router
+from es_app.ingest.service import IngestService
 from es_app.lexicon.router import get_lexicon_service
 from es_app.lexicon.router import router as lexicon_router
 from es_app.lexicon.seed import seed_builtin_toefl
@@ -37,6 +40,7 @@ def create_app() -> FastAPI:
 
     lexicon_store = LexiconStore(conn)
     lexicon_service = LexiconService(lexicon_store)
+    ingest_service = IngestService(lexicon_service)
     seed_builtin_toefl(lexicon_service)
     plan_service = PlanService(conn, lexicon_store)
     study_service = StudyService(conn, lexicon_store, plan_service)
@@ -54,12 +58,14 @@ def create_app() -> FastAPI:
 
     app.dependency_overrides[get_plan_service] = lambda: plan_service
     app.dependency_overrides[get_lexicon_service] = lambda: lexicon_service
+    app.dependency_overrides[get_ingest_service] = lambda: ingest_service
     app.dependency_overrides[get_study_service] = lambda: study_service
     app.dependency_overrides[get_exam_service] = lambda: exam_service
     app.dependency_overrides[get_progress_service] = lambda: progress_service
 
     app.include_router(plans_router)
     app.include_router(lexicon_router)
+    app.include_router(ingest_router)
     app.include_router(study_router)
     app.include_router(exam_router)
     app.include_router(progress_router)

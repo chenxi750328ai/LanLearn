@@ -55,7 +55,15 @@
 
   <aside class="import-panel">
     <h3>词库导入</h3>
-    <p class="import-note">导入功能下一分支</p>
+    <div class="controls">
+      <label>
+        CSV / TXT
+        <input type="file" id="import-file" accept=".csv,.txt,text/csv,text/plain">
+      </label>
+      <button type="button" id="btn-import-upload">上传预览</button>
+      <button type="button" id="btn-import-confirm" disabled>确认入库</button>
+    </div>
+    <div id="import-preview" class="info-box hidden"></div>
   </aside>
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
