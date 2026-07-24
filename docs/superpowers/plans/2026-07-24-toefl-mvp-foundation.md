@@ -4,20 +4,91 @@
 
 **Goal:** 在空仓库落地 OpenSpec 管理下的模块化 FastAPI 单体，打通托福计划 → 词库（内置/文件/OCR）→ 背词 → 两种托福词汇题型模考 → 进度汇总，并用最小 Web UI 在本机浏览器验收。
 
-**Architecture:** FastAPI 模块化单体（`plans` / `lexicon` / `ingest` / `study` / `exam` / `progress` + `adapters/`）；UI 只打 OpenAPI；Tesseract 为默认 OCR；Ollama 仅经 Adapter（本计划只留 Protocol + `/speech/evaluate` 503 桩，发音完整实现见后续计划）；推荐进程跑在 WSL，复用已有 Ollama，不安装第二份。
+**Architecture:** FastAPI 模块化单体（`plans` / `lexicon` / `ingest` / `study` / `exam` / `progress` / `quiz` + `adapters/`）；UI 挂 `/ui`，API 无前缀；Tesseract OCR 经 threadpool；study/exam 会话持久化在 SQLite；默认在 **WSL** 跑 API 并复用已有 Ollama；手机外网经 **Tailscale** 访问（禁止公网裸端口）；本计划只留 `/speech/evaluate` 503 桩。
 
-**Tech Stack:** Python 3.11+、FastAPI、Uvicorn、Pydantic v2、SQLite（stdlib `sqlite3`）、httpx（测试）、pytest、Tesseract（系统依赖，测试用 Fake）、静态 Web（`static/` 无构建步）
+**Tech Stack:** Python 3.11+、FastAPI、Uvicorn、Pydantic v2、SQLite（stdlib `sqlite3`）、httpx（测试）、pytest、Tesseract（系统依赖，测试用 Fake）、静态 Web（`static/` 无构建步）、Tailscale（外网组网，非代码依赖）
 
 ## Global Constraints
 
 - Ollama：只连 WSL 已有实例（`OLLAMA_HOST`），禁止默认再装 Windows 原生重复实例
+- **默认运行位置：** FastAPI/uvicorn 在 **WSL** 内启动；Windows 浏览器经 `localhost` 访问；Windows 原生跑 API 仅为可选附录
+- **监听：** 默认 `ES_BIND=127.0.0.1`；Tailscale 联调时可设 `ES_BIND=0.0.0.0`（仍无鉴权，仅信任 Tailnet ACL）
+- **外网手机：** 使用 **Tailscale**（或同类私有组网）；**禁止**路由器端口转发裸出无鉴权 API；**不做**云上托管 API（本计划）
 - 单用户本机；无账号；数据根目录可配置（`ES_DATA_DIR`）
 - 词库字段：`word`（必填）、`phonetic`、`audio`、`definitions: list[str]`、`examples: list[str]`
 - 未确认的 `WordCandidate` 不得进入学习池 / 默认不得入 exam 组卷
+- study/exam **会话状态存 SQLite**（进程重启可续）
 - 无 Ollama 时背词与考试必须可用；依赖 Ollama 的接口返回 503
-- 特性用 OpenSpec 管理；先 `arch-foundation`，再 `toefl-vertical-slice`
+- 特性用 OpenSpec 管理；Git 分支与 OpenSpec change 对齐（见下节）
 - 本计划 **不含** 完整发音评测实现与华为客户端（另开计划）：`docs/superpowers/plans/` 后续 `2026-07-24-pronunciation.md`、`2026-07-24-huawei-client-skeleton.md`
-- 不做：SRS、爬词、云同步、多用户、完整托福听说套题
+- 不做：SRS、爬词、云同步、多用户账号、完整托福听说套题、公网裸暴露、CI/CD 发布流水线（显式后置）
+
+---
+
+## Git Branch Strategy
+
+功能全集保留；用顺序特性枝拆 PR（gstack eng review 决议 **B+A**）。
+
+```text
+master                         # 仅合并后的可运行快照；禁止长期直接堆 MVP 大 commit
+  └─ feat/arch-foundation      # OpenSpec arch-foundation + 包骨架/Schema/Adapter/speech 桩
+       └─ feat/toefl-core      # plans + lexicon seed + study + exam + progress + /ui
+            └─ feat/ingest-ocr # 文件导入 + Tesseract OCR（仍属本计划，第二/三 PR）
+  ∥ feat/pronunciation         # 后续计划；自 foundation+core 切出
+  ∥ feat/huawei-client-skeleton
+```
+
+### Git 操作约定（执行本计划时必须遵守）
+
+1. **开写前**（Task 0）：`git checkout master && git checkout -b feat/arch-foundation`
+2. **每任务结束**：按任务内 `git add <显式路径>` + `git commit`（禁止 `git add -A`；禁止 `--no-verify`）
+3. **分支完成**：在 WSL/本机跑 `pytest -v` 全绿后合并：
+   - 有远程：`git push -u origin HEAD` → `gh pr create` → 评审通过后 merge
+   - 无远程（当前）：`git checkout master && git merge --no-ff feat/arch-foundation`
+4. **晋升下一枝**：`git checkout -b feat/toefl-core`（基于已合并的 master）
+5. **ingest 同理** 切 `feat/ingest-ocr`
+6. **禁止** 在 `master` 上直接实现 Task 2–12；**禁止** force-push `master`
+7. commit message 风格：`feat:` / `fix:` / `docs:` / `test:` / `chore:` 前缀，英文或中文短句说明动机
+
+### 任务 ↔ 分支映射
+
+| 任务 | 分支 |
+|------|------|
+| Task 0–2, speech 桩骨架, OpenSpec foundation | `feat/arch-foundation` |
+| Task 3–5, 8–12（含 UI；不含 ingest 文件/OCR） | `feat/toefl-core` |
+| Task 6–7 | `feat/ingest-ocr` |
+| Task 13 | 当前收尾枝或 master 上的 docs commit |
+
+> 若执行时 Task 4 的 lexicon 路由需在 core 才挂载，foundation 只留 Schema/store/协议；以「每枝可独立 pytest 子集绿」为准微调，但不得把 ingest 塞进 foundation。
+
+---
+
+## GSTACK Tooling（执行与门禁）
+
+本仓库已用 brainstorming + writing-plans；实现阶段强制使用下列 gstack / 相关技能（Cursor skills 路径 `~/.cursor/skills/gstack-*` 或用户配置的等价命令）。
+
+| 时机 | 工具 | 用途 |
+|------|------|------|
+| 开写前（已完成） | `/plan-eng-review`（本轮） | 锁架构、测试、分支；计划末尾须有 `## GSTACK REVIEW REPORT` |
+| 每特性枝实现 | `superpowers:subagent-driven-development` 或 `executing-plans` | 按 Task 复选框执行；TDD |
+| 某枝准备合并前 | gstack `/review`（若可用）或人工 diff 审 | 审该枝相对 master 的 diff |
+| 合并/发 PR 前 | gstack `/ship` | 检测 base、跑测试、整理 commit、开 PR（有远程时） |
+| UI 可点后 | gstack `/qa` | 对本机 `http://127.0.0.1:8000/ui/` 走通计划→背词→模考 |
+| 范围再膨胀时 | `/plan-eng-review` 或 `/office-hours` | 先评审再改计划，禁止无评审扩 scope |
+| 并行发音/华为计划 | 各开 writing-plans → 再 `/plan-eng-review` | 不得绕过 foundation/core 直接改私有表 |
+
+### 代理执行检查清单（每个 PR）
+
+- [ ] 当前不在裸 `master` 上开发（除非 Task 13 docs-only 且已声明）
+- [ ] `pytest -v` 全绿（或该枝约定的测试子集 + 说明）
+- [ ] 未引入第二份 Ollama；未添加公网端口转发文档作为默认路径
+- [ ] OpenSpec change 文件夹与分支名对应
+- [ ] 准备合并时运行 `/ship` 或等价：`gh pr create` + 测试证据
+
+### 明确不在本计划调用的 gstack
+
+- `/land-and-deploy`（无云部署）
+- 自动 `git add CLAUDE.md && commit` 类 setup 副作用（本环境禁止未经要求提交配置）
 
 ---
 
@@ -44,13 +115,16 @@ README.md
 src/es_app/
   __init__.py
   main.py                         # FastAPI app 装配
-  config.py                       # ES_DATA_DIR, OLLAMA_HOST
+  config.py                       # ES_DATA_DIR, OLLAMA_HOST, ES_BIND
   errors.py                       # ErrorBody + exception handlers
-  db.py                           # SQLite 连接与 schema 迁移
+  db.py                           # SQLite 连接与 schema 迁移（含 session 表）
   schemas/
     __init__.py
-    word.py                       # Word, WordCandidate, WordCreate
+    word.py                       # Word, WordCandidate
     common.py                     # ErrorBody
+  quiz/
+    __init__.py
+    distractors.py                # pick_definition_distractors（study+exam 共用）
   adapters/
     __init__.py
     protocols.py                  # OcrPort, VisionOcrPort, OllamaPort
@@ -107,6 +181,40 @@ tests/
     words_sample.csv
     words_sample.txt
     ocr_sample.png                # 含清晰英文单词的小图
+```
+
+---
+
+### Task 0: 建立 `feat/arch-foundation` 分支
+
+**Files:**
+- None（仅 Git）
+
+**Interfaces:**
+- Consumes: 干净 `master`
+- Produces: 工作分支 `feat/arch-foundation`
+
+- [ ] **Step 1: 确认在 master 且工作区干净**
+
+```bash
+git status -sb
+git checkout master
+```
+
+Expected: 无未提交脏文件（或仅有本计划文档已提交）
+
+- [ ] **Step 2: 创建特性枝**
+
+```bash
+git checkout -b feat/arch-foundation
+```
+
+- [ ] **Step 3: 记录 gstack 起点（可选）**
+
+若本机有 gstack timeline：
+
+```bash
+~/.claude/skills/gstack/bin/gstack-timeline-log '{"skill":"executing-plans","event":"started","branch":"feat/arch-foundation"}' 2>/dev/null || true
 ```
 
 ---
@@ -422,9 +530,29 @@ def init_db(conn: sqlite3.Connection) -> None:
           payload_json TEXT NOT NULL,
           created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS study_sessions (
+          id TEXT PRIMARY KEY,
+          plan_id INTEGER NOT NULL,
+          day_index INTEGER NOT NULL,
+          mode TEXT NOT NULL,
+          state_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS exam_sessions (
+          id TEXT PRIMARY KEY,
+          plan_id INTEGER NOT NULL,
+          questions_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
         """
     )
     conn.commit()
+```
+
+`Settings` 增加：
+
+```python
+bind_host: str = Field(default="127.0.0.1", validation_alias="ES_BIND")
 ```
 
 `tests/conftest.py`:
@@ -798,11 +926,26 @@ words = self._lexicon.list_words(complete_only=True)
 
 若 `complete_only` 词数为 0：raise `AppError("empty_lexicon", "请先加载词库", 400)`。
 
+**硬门禁测试（gstack D10）：**
+
+```python
+def test_create_plan_empty_lexicon_400(conn):
+    plans = PlanService(conn, LexiconStore(conn))
+    try:
+        plans.create_plan(exam_type="toefl", daily_quota=5)
+        assert False, "expected AppError"
+    except AppError as e:
+        assert e.status_code == 400
+        assert e.code == "empty_lexicon"
+```
+
 ```bash
 pytest tests/test_plans.py -v
 git add src/es_app/plans tests/test_plans.py
 git commit -m "feat: create TOEFL study plans from lexicon"
 ```
+
+**分支提醒：** 本任务起应在 `feat/toefl-core`（foundation 合并后切枝）。若仍在 foundation，先完成 foundation merge 再继续。
 
 ---
 
@@ -914,6 +1057,10 @@ class NoopVisionOcr:
         return base_text
 ```
 
+**性能（gstack D11）：** `POST /ingest/image` 的 OCR 调用必须经 `asyncio.to_thread(...)` 或 Starlette `run_in_threadpool`，禁止在 `async def` 路由里直接阻塞跑 Tesseract。
+
+**分支：** `feat/ingest-ocr`（core 合并之后）。
+
 ```bash
 pytest tests/test_ingest_ocr.py -v
 git add src/es_app/adapters src/es_app/ingest tests/test_ingest_ocr.py
@@ -925,34 +1072,41 @@ git commit -m "feat: OCR ingest via OcrPort with fake adapter for tests"
 ### Task 8: Study 背词会话
 
 **Files:**
+- Create: `src/es_app/quiz/distractors.py`
 - Create: `src/es_app/study/service.py`
 - Create: `src/es_app/study/router.py`
 - Create: `tests/test_study.py`
+- Create: `tests/test_distractors.py`
+- Create: `tests/test_study_session_persist.py`
 
 **Interfaces:**
-- Consumes: plan word_ids；lexicon words
+- Consumes: plan word_ids；lexicon words；`pick_definition_distractors(correct: str, pool: list[str], k: int = 3, *, rng) -> list[str]`
 - Produces:
-  - `POST /study/sessions` `{ plan_id, day_index, mode: "flashcard"|"mcq" }` → session
+  - `POST /study/sessions` `{ plan_id, day_index, mode: "flashcard"|"mcq" }` → session（**写入 `study_sessions` 表**）
   - `POST /study/sessions/{id}/answer` `{ word_id, answer }` → `{ correct, correct_definition }`
   - 写 `progress_events` kind=`study`
 
-MCQ：题干为英文 word，选项为 4 个中文释义（1 正确 + 3 干扰，从其他词 definitions[0] 抽）。
+MCQ：题干为英文 word，选项为 4 个中文释义（1 正确 + 3 干扰，**必须**调用 `quiz.distractors`）。
 
-- [ ] **Step 1: Failing test**
+- [ ] **Step 1: Write failing tests**（含持久化硬门禁）
 
 ```python
 def test_study_mcq_answer(conn):
     # seed, create plan, start session mode=mcq, answer correctly/incorrectly
     ...
-```
 
-（测试内写完整 arrange；断言 `correct is True` 且 progress_events 有行。）
+
+def test_study_session_survives_new_connection(data_dir, monkeypatch):
+    """同一 ES_DATA_DIR，第二次 create_app/新连接仍能 answer。"""
+    ...
+```
 
 - [ ] **Step 2–4: Implement + commit**
 
 ```bash
-pytest tests/test_study.py -v
-git commit -m "feat: study sessions with flashcard and mcq modes"
+pytest tests/test_distractors.py tests/test_study.py tests/test_study_session_persist.py -v
+git add src/es_app/quiz src/es_app/study tests/test_distractors.py tests/test_study.py tests/test_study_session_persist.py
+git commit -m "feat: study sessions with flashcard, mcq, and sqlite persistence"
 ```
 
 ---
@@ -969,18 +1123,27 @@ git commit -m "feat: study sessions with flashcard and mcq modes"
 - Consumes: complete words only（`incomplete=0`）
 - Produces:
   - 题型 `synonym_mcq`：选与题干最接近的同义释义（用 definitions 第一条作正确项；干扰项其他词）
-  - 题型 `contextual_blank`：例句挖空（用 `examples[0]`，将 word 替换为 `____`；若无例句则跳过该词）
-  - `POST /exam/sessions` `{ plan_id, question_count: int }` → 混合两种题型（各至少 1 题，若词量允许）
+  - 题型 `contextual_blank`：例句挖空（用 `examples[0]`，将 word 替换为 `____`；**若无例句则跳过该词**，并有单测锁定）
+  - `POST /exam/sessions` `{ plan_id, question_count: int }` → 混合两种题型（各至少 1 题，若词量允许）；**写入 `exam_sessions`**
   - `POST /exam/sessions/{id}/submit` `{ answers: [{question_id, choice}] }` → report `{ score, total, wrong_word_ids }`
   - 写 `progress_events` kind=`exam`
+  - synonym 干扰项 **必须** 复用 `quiz.distractors`
 
-- [ ] **Step 1: Failing tests for both templates + submit report**
+- [ ] **Step 1: Failing tests for both templates + submit report + skip-no-example + session persist**
 
 ```python
 from es_app.exam.templates import build_synonym_mcq, build_contextual_blank
 
 
 def test_build_synonym_mcq_has_four_options(conn):
+    ...
+
+
+def test_contextual_skips_word_without_examples(conn):
+    ...
+
+
+def test_exam_session_survives_new_connection(data_dir, monkeypatch):
     ...
 
 
@@ -992,6 +1155,7 @@ def test_exam_report_scores(conn):
 
 ```bash
 pytest tests/test_exam.py -v
+git add src/es_app/exam tests/test_exam.py
 git commit -m "feat: TOEFL-like exam with synonym and contextual templates"
 ```
 
@@ -1049,9 +1213,9 @@ def test_toefl_loop(data_dir, monkeypatch):
     assert r.status_code == 503
 ```
 
-（补全：study session → exam → progress。）
+（补全：study session → exam → progress；**两次 `create_app()` 共享 data_dir 测会话持久化**；`GET /ui/` 200 且 `GET /plans` 非静态误伤。）
 
-- [ ] **Step 2: Implement `create_app()`** — 依赖注入覆盖各 `get_*_service`；启动时 `init_db` + `seed_builtin_toefl`。
+- [ ] **Step 2: Implement `create_app()`** — 依赖注入覆盖各 `get_*_service`；启动时 `init_db` + `seed_builtin_toefl`。**路由挂载顺序：** 先 `include_router` 全部 API，再 `mount("/ui", StaticFiles(...))`，`GET /` → RedirectResponse `/ui/`。
 
 `speech/router.py`:
 
@@ -1093,18 +1257,34 @@ git commit -m "feat: wire FastAPI app, speech stub, and TOEFL API e2e"
 **Interfaces:**
 - Consumes: `/plans`, `/lexicon/words`, `/study/*`, `/exam/*`, `/progress/summary`, `/ingest/file`
 
-UI 一页四块（不要做成仪表盘堆砌）：顶部标题「托福学习」；主操作：创建计划 → 背词 → 模考 → 看进度；侧或下部：文件上传导入。
+UI 一页四块（不要做成仪表盘堆砌）：顶部标题「托福学习」；主操作：创建计划 → 背词 → 模考 → 看进度；侧或下部：文件上传导入。  
+**入口 URL：** `http://127.0.0.1:8000/ui/`（根路径重定向到此）。
 
 - [ ] **Step 1: 手写静态页调用 API（fetch）**
-- [ ] **Step 2: 本地启动验收**
+- [ ] **Step 2: 本地启动验收（默认 WSL）**
 
 ```bash
-uvicorn es_app.main:app --app-dir src --reload --host 127.0.0.1 --port 8000
+# 在 WSL 内，仓库目录下：
+export ES_DATA_DIR="$HOME/.es_app"
+export OLLAMA_HOST="http://127.0.0.1:11434"
+export ES_BIND="127.0.0.1"
+uvicorn es_app.main:app --app-dir src --reload --host "$ES_BIND" --port 8000
 ```
 
-浏览器打开 `http://127.0.0.1:8000/`，走通：建计划 → 背 1 题 → 考 1 次 → 看 summary。
+浏览器打开 `http://127.0.0.1:8000/ui/`，走通：建计划 → 背 1 题 → 考 1 次 → 看 summary。
 
-- [ ] **Step 3: Commit**
+**Tailscale（华为外网，骨架阶段）：** 手机与 WSL 节点加入同一 Tailnet；临时 `ES_BIND=0.0.0.0`，用 WSL 的 Tailscale IP:8000；**不要**做路由器端口转发。
+
+- [ ] **Step 3: 合并前 gstack 门禁**
+
+```bash
+pytest -v
+# 有远程时：
+# git push -u origin HEAD && gh pr create
+# 然后 /ship 或人工 merge 到 master，再切下一枝
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add static src/es_app/main.py
@@ -1161,19 +1341,49 @@ git commit -m "docs: mark OpenSpec MVP tasks done and note follow-on plans"
 ## Type / 命名一致性
 
 - `Word` / `WordCandidate` / `definitions` / `examples` 全计划统一
-- 环境变量：`ES_DATA_DIR`、`OLLAMA_HOST`
-- 路由前缀与设计 §3.3 一致
+- 环境变量：`ES_DATA_DIR`、`OLLAMA_HOST`、`ES_BIND`
+- 路由前缀与设计 §3.3 一致（API 无前缀；UI 在 `/ui`）
 - `AppError` + `ErrorBody` 统一错误
+- 分支：`feat/arch-foundation` → `feat/toefl-core` → `feat/ingest-ocr`
 
 ---
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-07-24-toefl-mvp-foundation.md`.
+实现前确认本文件末尾 `## GSTACK REVIEW REPORT` 为 CLEAR。  
 
 **Two execution options:**
 
-1. **Subagent-Driven（推荐）** — 每任务派一个新子代理，任务间审查，迭代快  
-2. **Inline Execution** — 本会话用 executing-plans 按检查点批量执行  
+1. **Subagent-Driven（推荐）** — 每任务一个新子代理，任务间审查；遵守 Git 分支映射  
+2. **Inline Execution** — 本会话 executing-plans；每枝合并点暂停  
 
 **Which approach?**
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | not run |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | not run |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions accepted; 0 unresolved |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run (minimal /ui; optional before polish) |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | not run |
+
+**Outside voice:** 未跑独立第二模型；结论仅基于本轮 eng review。
+
+**Accepted decisions (this review):**
+- Scope: keep full MVP features; split PRs via three sequential branches
+- Branch topology: `feat/arch-foundation` → `feat/toefl-core` → `feat/ingest-ocr`
+- Sessions: SQLite persistence + hard-gate restart tests
+- Runtime: default API in WSL; `ES_BIND` default 127.0.0.1
+- Phone WAN: Tailscale only; no bare port-forward; no cloud API host in this plan
+- DRY: shared `quiz.distractors`
+- Static: mount `/ui`; `/` redirects; API unprefixed
+- Tests: empty plan 400; contextual skip no-example; `/ui` must not shadow API
+- OCR: `run_in_threadpool` / `asyncio.to_thread`
+
+**VERDICT:** ENG CLEARED — ready to implement on feature branches per Git/GSTACK sections.
+
+NO UNRESOLVED DECISIONS
