@@ -75,3 +75,17 @@ class PlanService:
             daily_quota=row["daily_quota"],
             days=days,
         )
+
+    def get_day_word_ids(self, plan_id: int, day_index: int) -> list[int]:
+        self.get_plan(plan_id)
+        rows = self._conn.execute(
+            """
+            SELECT word_id FROM plan_words
+            WHERE plan_id = ? AND day_index = ?
+            ORDER BY word_id
+            """,
+            (plan_id, day_index),
+        ).fetchall()
+        if not rows:
+            raise AppError("day_not_found", "计划日不存在", 404)
+        return [int(r["word_id"]) for r in rows]
