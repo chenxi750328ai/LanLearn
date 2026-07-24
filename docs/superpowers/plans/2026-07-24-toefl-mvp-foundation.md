@@ -315,43 +315,6 @@ httpx>=0.27
 ```python
 from functools import lru_cache
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-    data_dir: Path = Path.home() / ".es_app"
-    ollama_host: str = "http://127.0.0.1:11434"
-
-    def model_post_init(self, __context) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-
-
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
-```
-
-注意：`ES_DATA_DIR` / `OLLAMA_HOST` 由 pydantic-settings 自动映射（字段名大写+下划线）。若需显式：
-
-```python
-    data_dir: Path = Path.home() / ".es_app"
-    ollama_host: str = "http://127.0.0.1:11434"
-```
-
-并确保环境变量名为 `ES_DATA_DIR` 时使用：
-
-```python
-from pydantic import Field
-data_dir: Path = Field(default_factory=lambda: Path.home() / ".es_app", validation_alias="ES_DATA_DIR")
-```
-
-采用显式 alias 版本：
-
-```python
-from functools import lru_cache
-from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -359,8 +322,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    data_dir: Path = Field(default_factory=lambda: Path.home() / ".es_app", validation_alias="ES_DATA_DIR")
-    ollama_host: str = Field(default="http://127.0.0.1:11434", validation_alias="OLLAMA_HOST")
+    data_dir: Path = Field(
+        default_factory=lambda: Path.home() / ".es_app",
+        validation_alias="ES_DATA_DIR",
+    )
+    ollama_host: str = Field(
+        default="http://127.0.0.1:11434",
+        validation_alias="OLLAMA_HOST",
+    )
 
 
 @lru_cache
