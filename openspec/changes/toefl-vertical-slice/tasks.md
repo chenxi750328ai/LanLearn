@@ -6,5 +6,5 @@
 - [x] progress summary + router
 - [x] main 装配 + speech 503 桩
 - [x] E2E API 测试
-- [ ] 最小 Web UI（Task 12）
-- [ ] ingest 文件/OCR（ingest-ocr 枝）
+- [x] 最小 Web UI（Task 12）
+- [x] ingest 文件/OCR（ingest-ocr 枝）
