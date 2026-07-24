@@ -4,7 +4,7 @@ from pathlib import Path
 
 def get_connection(data_dir: Path) -> sqlite3.Connection:
     data_dir.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(data_dir / "es.sqlite3")
+    conn = sqlite3.connect(data_dir / "es.sqlite3", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
