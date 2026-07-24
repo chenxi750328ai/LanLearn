@@ -83,3 +83,30 @@ def test_study_session_persists_across_app_instances(data_dir, monkeypatch):
     )
     assert answer.status_code == 200
     assert answer.json()["correct"] is True
+
+
+def test_exam_session_persists_across_app_instances(data_dir, monkeypatch):
+    """同一 ES_DATA_DIR，第二次 create_app/新连接仍能 submit。"""
+    monkeypatch.setenv("ES_DATA_DIR", str(data_dir))
+    get_settings.cache_clear()
+
+    client1 = TestClient(create_app())
+    plan = client1.post("/plans", json={"exam_type": "toefl", "daily_quota": 5}).json()
+    exam = client1.post(
+        "/exam/sessions",
+        json={"plan_id": plan["id"], "question_count": 3},
+    ).json()
+
+    get_settings.cache_clear()
+    client2 = TestClient(create_app())
+    answers = [
+        {"question_id": q["id"], "choice": q["options"][0]} for q in exam["questions"]
+    ]
+    submit = client2.post(
+        f"/exam/sessions/{exam['id']}/submit",
+        json={"answers": answers},
+    )
+    assert submit.status_code == 200
+    report = submit.json()
+    assert report["total"] == len(exam["questions"])
+    assert 0 <= report["score"] <= report["total"]
