@@ -1573,11 +1573,11 @@ git commit -m "docs: add MVP verification and QA evidence"
 | Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions accepted; QA gates added 2026-07-25 |
 | Design Review | `/plan-design-review` | UI/UX gaps | 0 | REQUIRED before polish | Gate A3/A13 — run in Task 14 Step 6 if UI ships |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | start.ps1 added; re-run if DX changes |
-| Browser QA | `/qa` | Real UI verification | 0 | **REQUIRED** | Task 14 — was missing at first impl claim |
-| Diff Review | `/review` | Pre-merge code review | 0 | **REQUIRED** | Task 14 |
-| Ship | `/ship` | Land/PR gates | 0 | **REQUIRED** | after Task 14 Steps 1–7 |
+| Browser QA | `/qa` | Real UI verification | 1 | CLEAR | Standard 2026-07-25; High BOM fixed `775bdd1` |
+| Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | notes in qa verification doc; no Critical |
+| Ship | `/ship` | Land/PR gates | 0 | PENDING | await user finishing choice |
 
-**Outside voice:** 未跑独立第二模型；合入前随 `/ship` 补对抗审。
+**Outside voice:** 未跑独立第二模型；合入前可选随 `/ship` 补对抗审。
 
 **Accepted decisions (eng review):**
 - Scope: keep full MVP features; split PRs via three sequential branches
@@ -1591,7 +1591,14 @@ git commit -m "docs: add MVP verification and QA evidence"
 - OCR: `run_in_threadpool` / `asyncio.to_thread`
 - **QA (2026-07-25 addendum):** Superpowers + GStack quality gates A0–A17 + Task 14 are mandatory; pytest alone is not acceptance
 
-**VERDICT:** ENG CLEARED for implementation design — **PRODUCT ACCEPTANCE NOT CLEARED until Task 14 (`/qa` + verification-before-completion + `/review` + `/ship`) completes.**
+**Task 14 progress (2026-07-25):**
+- A9 verification-before-completion: CLEAR (`34 passed`, `/ui` 200, `/docs` 200, `/` 307, speech 503)
+- A10 `/qa` Standard: CLEAR after High fix UTF-8 BOM CSV
+- A12 `/review`: CLEAR (non-blocking follow-ups only)
+- A13 design-review: Accept MVP UI
+- A14 `/ship` / A15 finishing: PENDING user
+
+**VERDICT:** ENG CLEARED + **PRODUCT ACCEPTANCE CLEARED for merge decision** — execute finishing option next.
 
 **UNRESOLVED DECISIONS:**
-- Task 14 尚未完成（浏览器 `/qa`、合入前 `/review`/`/ship`）
+- User must choose finishing: (1) merge to master locally (2) push/PR (3) keep branch (4) discard
