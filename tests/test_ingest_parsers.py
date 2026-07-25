@@ -16,3 +16,10 @@ def test_parse_txt():
     text = (FIXTURES / "words_sample.txt").read_text(encoding="utf-8")
     ok, failures = parse_txt(text)
     assert len(ok) >= 1
+
+
+def test_parse_csv_strips_utf8_bom():
+    text = "\ufeffword,phonetic,audio,definitions,examples\nqa_word_one,/t/,,\"测试\",\"ex\"\n"
+    ok, failures = parse_csv(text)
+    assert [c.word for c in ok] == ["qa_word_one"]
+    assert failures == []

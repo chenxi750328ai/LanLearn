@@ -4,6 +4,14 @@ import io
 from es_app.schemas.word import WordCandidate
 
 
+def _strip_bom(text: str) -> str:
+    return text.lstrip("\ufeff")
+
+
+def _normalize_row(row: dict) -> dict:
+    return {(k.lstrip("\ufeff") if isinstance(k, str) else k): v for k, v in row.items()}
+
+
 def _split_semicolon(value: str | None) -> list[str]:
     if not value:
         return []
@@ -18,14 +26,15 @@ def _optional_field(value: str | None) -> str | None:
 
 
 def parse_csv(text: str) -> tuple[list[WordCandidate], list[dict]]:
-    reader = csv.DictReader(io.StringIO(text))
+    reader = csv.DictReader(io.StringIO(_strip_bom(text)))
     candidates: list[WordCandidate] = []
     failures: list[dict] = []
 
-    for line_no, row in enumerate(reader, start=2):
+    for line_no, raw_row in enumerate(reader, start=2):
+        row = _normalize_row(dict(raw_row))
         word = (row.get("word") or "").strip()
         if not word:
-            failures.append({"line": line_no, "reason": "empty word", "row": dict(row)})
+            failures.append({"line": line_no, "reason": "empty word", "row": row})
             continue
 
         candidates.append(
@@ -45,7 +54,7 @@ def parse_txt(text: str) -> tuple[list[WordCandidate], list[dict]]:
     candidates: list[WordCandidate] = []
     failures: list[dict] = []
 
-    for line_no, raw in enumerate(text.splitlines(), start=1):
+    for line_no, raw in enumerate(_strip_bom(text).splitlines(), start=1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
