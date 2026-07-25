@@ -1,6 +1,6 @@
 # TOEFL MVP（架构地基 + 垂直切片）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILLS in order: (1) `superpowers:subagent-driven-development` 或 `executing-plans` 实现；(2) 每任务 `superpowers:test-driven-development`；(3) 宣称可用前强制 `superpowers:verification-before-completion` + gstack `/qa`；(4) 合入前 gstack `/review` + `/ship` + `superpowers:finishing-a-development-branch`。Steps use checkbox (`- [ ]`) syntax for tracking. **禁止**仅用 pytest 绿就宣称「网页可用」。
 
 **Goal:** 在空仓库落地 OpenSpec 管理下的模块化 FastAPI 单体，打通托福计划 → 词库（内置/文件/OCR）→ 背词 → 两种托福词汇题型模考 → 进度汇总，并用最小 Web UI 在本机浏览器验收。
 
@@ -22,6 +22,7 @@
 - 特性用 OpenSpec 管理；Git 分支与 OpenSpec change 对齐（见下节）
 - 本计划 **不含** 完整发音评测实现与华为客户端（另开计划）：`docs/superpowers/plans/` 后续 `2026-07-24-pronunciation.md`、`2026-07-24-huawei-client-skeleton.md`
 - 不做：SRS、爬词、云同步、多用户账号、完整托福听说套题、公网裸暴露、CI/CD 发布流水线（显式后置）
+- **质量门禁不许跳过：** 见下节「Quality Assurance Gates」全文；未完成 Task 14（`/qa` + verification-before-completion）不得宣称 MVP 可用、不得 `/ship` 合并
 
 ---
 
@@ -58,37 +59,164 @@ master                         # 仅合并后的可运行快照；禁止长期�
 | Task 3–5, 8–12（含 UI；不含 ingest 文件/OCR） | `feat/toefl-core` |
 | Task 6–7 | `feat/ingest-ocr` |
 | Task 13 | 当前收尾枝或 master 上的 docs commit |
+| Task 14（质量门禁补跑） | 当前集成枝（通常 `feat/ingest-ocr`）上执行；通过后才允许 merge `master` |
 
 > 若执行时 Task 4 的 lexicon 路由需在 core 才挂载，foundation 只留 Schema/store/协议；以「每枝可独立 pytest 子集绿」为准微调，但不得把 ingest 塞进 foundation。
 
 ---
 
-## GSTACK Tooling（执行与门禁）
+## Quality Assurance Gates（Superpowers + GStack — 不许遗漏）
 
-本仓库已用 brainstorming + writing-plans；实现阶段强制使用下列 gstack / 相关技能（Cursor skills 路径 `~/.cursor/skills/gstack-*` 或用户配置的等价命令）。
+本节是 **硬门禁**：实现代理 / 人类执行者均不得省略任何一行「必做」项。  
+技能路径：`~/.cursor/skills/superpowers-*`、`~/.cursor/skills/gstack-*`（或用户配置的等价 `/` 命令）。
 
-| 时机 | 工具 | 用途 |
-|------|------|------|
-| 开写前（已完成） | `/plan-eng-review`（本轮） | 锁架构、测试、分支；计划末尾须有 `## GSTACK REVIEW REPORT` |
-| 每特性枝实现 | `superpowers:subagent-driven-development` 或 `executing-plans` | 按 Task 复选框执行；TDD |
-| 某枝准备合并前 | gstack `/review`（若可用）或人工 diff 审 | 审该枝相对 master 的 diff |
-| 合并/发 PR 前 | gstack `/ship` | 检测 base、跑测试、整理 commit、开 PR（有远程时） |
-| UI 可点后 | gstack `/qa` | 对本机 `http://127.0.0.1:8000/ui/` 走通计划→背词→模考 |
-| 范围再膨胀时 | `/plan-eng-review` 或 `/office-hours` | 先评审再改计划，禁止无评审扩 scope |
-| 并行发音/华为计划 | 各开 writing-plans → 再 `/plan-eng-review` | 不得绕过 foundation/core 直接改私有表 |
+### A. 端到端质量生命周期（必做顺序）
 
-### 代理执行检查清单（每个 PR）
+```text
+构思锁定 → 计划评审 → 隔离实现(TDD+任务审) → 单测证据
+    → 实机启动+浏览器 QA → diff 代码审 → ship/合并 → 收尾
+```
 
-- [ ] 当前不在裸 `master` 上开发（除非 Task 13 docs-only 且已声明）
-- [ ] `pytest -v` 全绿（或该枝约定的测试子集 + 说明）
-- [ ] 未引入第二份 Ollama；未添加公网端口转发文档作为默认路径
-- [ ] OpenSpec change 文件夹与分支名对应
-- [ ] 准备合并时运行 `/ship` 或等价：`gh pr create` + 测试证据
+| # | 阶段 | 必做技能 / 命令 | 通过判据（必须有当场输出/产物） |
+|---|------|-----------------|--------------------------------|
+| A0 | 构思（已完成可勾） | `superpowers:brainstorming` | 设计稿已批：`docs/superpowers/specs/2026-07-24-english-learning-design.md` |
+| A1 | 写计划（已完成可勾） | `superpowers:writing-plans` | 本计划文件存在且含任务复选框 |
+| A2 | 计划工程审（已完成可勾） | gstack `/plan-eng-review` | 本文件末尾 `## GSTACK REVIEW REPORT` + `ENG CLEARED` / `NO UNRESOLVED DECISIONS` |
+| A3 | 可选计划加深（范围大时必做） | gstack `/office-hours`、`/spec`、`/plan-ceo-review`、`/plan-design-review`、`/plan-devex-review`、`/autoplan` | 若触达 UI 大改或商业范围变更：至少补跑对应 review，并更新本文件 REPORT 表 |
+| A4 | 实现隔离 | `superpowers:using-git-worktrees`（优先）或本计划 Git 三枝 | 不在裸 `master` 上写业务；有 feature 枝 |
+| A5 | 按任务实现 | `superpowers:subagent-driven-development` **或** `superpowers:executing-plans` | 每任务有 brief/report 或检查点记录；进度账本 `.superpowers/sdd/progress.md` |
+| A6 | 单测纪律 | 每任务内 `superpowers:test-driven-development` | 报告含 RED→GREEN 证据（命令+关键输出） |
+| A7 | 任务级审 | SDD 内置 task-reviewer（spec + quality） | Spec PASS + Quality Approved；Critical/Important 已修并复审 |
+| A8 | 全枝代码审 | `superpowers:requesting-code-review`（终审模板） | 终审 Verdict 非「阻断」；Important 已修 |
+| A9 | **宣称可用前** | **`superpowers:verification-before-completion`（铁律）** | **同一轮消息内**跑通：`pytest -v` **且** 实机 `.\scripts\start.ps1`（或等价 uvicorn）**且** HTTP `200` 打开 `/ui/`；输出贴进报告 |
+| A10 | **浏览器 QA** | **gstack `/qa`（默认 Standard；至少 Quick）** | 报告目录 `.gstack/qa-reports/`（或约定路径）；关键路径已点通；发现的 critical/high（Standard 含 medium）已修并复验 |
+| A11 | 仅报告模式（可选替代一次） | gstack `/qa-only` | 仅当用户明确只要报告不要自动修时；之后仍须 `/qa` 闭环或人工修完再 A9 |
+| A12 | Diff 审 | gstack `/review` | 对 `master..HEAD`（或当前 feature 枝）有审查结论；ASK 项已处理 |
+| A13 | 视觉/体验（UI 有可见改动时必做） | gstack `/design-review` | 有结论或「本迭代无视觉变更」书面声明 |
+| A14 | 合入 | gstack `/ship`（含测、覆盖审计、预着陆审、对抗审；有远程则 PR） | 测试绿；覆盖门禁通过或用户显式 override；PR/本地 merge 完成 |
+| A15 | 收尾 | `superpowers:finishing-a-development-branch` | 用户已选：合并 / PR / 保留 / 丢弃，并执行完毕 |
+| A16 | 审查意见回流 | `superpowers:receiving-code-review` | 若存在 PR/外部评论：逐条处理后再合 |
+| A17 | 缺陷排查 | `superpowers:systematic-debugging`（及 gstack `/investigate` 若可用） | 用户报「打不开/坏了」时禁止瞎改；先复现再修 |
 
-### 明确不在本计划调用的 gstack
+### B. Superpowers 技能全表（质量相关 — 本计划全部纳入门禁）
 
-- `/land-and-deploy`（无云部署）
-- 自动 `git add CLAUDE.md && commit` 类 setup 副作用（本环境禁止未经要求提交配置）
+| 技能 | 角色 | 本计划要求 |
+|------|------|------------|
+| `brainstorming` | 设计批准前不写码 | A0；已完成 |
+| `writing-plans` | 可执行计划 | A1；已完成 |
+| `using-git-worktrees` | 隔离工作区 | A4；无 worktree 时必须有等价 feature 枝纪律 |
+| `test-driven-development` | 先红后绿 | A6；每个含代码的 Task 必做 |
+| `subagent-driven-development` | 实现+任务审+终审 | A5+A7+A8（选 SDD 时） |
+| `executing-plans` | 检查点批量执行 | A5 替代路径；仍须 A6–A17 |
+| `dispatching-parallel-agents` | 并行独立任务 | 仅当任务无共享可变状态；本 MVP 默认串行 SDD |
+| `requesting-code-review` | 全枝审查 | A8 必做 |
+| `receiving-code-review` | 消化外部审查 | A16；有评论时必做 |
+| `verification-before-completion` | 完成断言前要证据 | **A9 铁律；违反=流程失败** |
+| `systematic-debugging` | 根因排查 | A17；QA/用户发现缺陷时必做 |
+| `finishing-a-development-branch` | 合并/PR/保留/丢弃 | A15 必做 |
+| `using-superpowers` | 技能发现与调用纪律 | 全程：先读 skill 再执行 |
+
+### C. GStack 技能/命令全表（质量相关 — 本计划全部纳入门禁）
+
+| 命令/技能 | 角色 | 本计划要求 |
+|-----------|------|------------|
+| `/office-hours` | 前提与方案探索 | A3；新产品方向或前提动摇时必做 |
+| `/spec` | 可执行规格 | A3；无 design+plan 时必做（本仓库已有则勾选已满足） |
+| `/plan-eng-review` | 架构/测试/性能审计划 | A2 必做；计划变更后重跑 |
+| `/plan-ceo-review` | 范围与策略 | A3；范围膨胀或商业取舍时必做 |
+| `/plan-design-review` | UI/UX 计划审 | A3；`/ui` 布局/交互大改前必做 |
+| `/plan-devex-review` | 开发者体验 | A3；启动脚本/本地 DX 大改时必做 |
+| `/autoplan` | CEO+Design+Eng+DX 串行 | A3；大范围重开计划时必做（可替代逐个 plan-*-review） |
+| `/review` | Diff 代码审查 | **A12 合入前必做** |
+| `/qa` | 浏览器测→修→再验 | **A10 宣称可用前必做**（默认 Standard） |
+| `/qa-only` | 只出 QA 报告 | A11 可选；不能单独替代 A10 闭环 |
+| `/design-review` | 视觉打磨审 | A13；有可见 UI 时必做 |
+| `/ship` | 测+审+PR/上岸 | **A14 合入前必做** |
+| `/investigate` | 难复现/深排障 | A17；若环境提供该 skill |
+| adversarial / `/codex review` | 对抗/第二模型 | 随 `/ship` 或 `/plan-*-review` 启用时必跟完；不可跳过其 P1 门禁 |
+| `/land-and-deploy` | 云部署 | **明确不做**（无云）；写入非目标即可 |
+
+### D. `/qa` 档位与本产品必测路径（不许少）
+
+**档位：**
+
+- **Quick**：只修 critical + high；首页 + 主导航冒烟  
+- **Standard（本计划默认）**：再含 medium  
+- **Exhaustive**：含 cosmetic/low  
+
+**必测用户路径（`/qa` 报告中逐条打勾）：**
+
+1. `.\scripts\start.ps1`（或 README 等价命令）启动成功，日志无 traceback  
+2. 浏览器打开 `http://127.0.0.1:8000/ui/`（标题「托福学习」）  
+3. `http://127.0.0.1:8000/` 重定向到 `/ui/`  
+4. `http://127.0.0.1:8000/docs` 可开  
+5. 创建托福计划 → 展示计划信息 → 「开始背词」「开始模考」可点  
+6. 背词至少答 1 题（对/错反馈可见）  
+7. 模考至少提交 1 次并出分  
+8. 刷新进度数字变化合理  
+9. CSV/TXT 上传预览 + 确认入库（ingest 枝合并后）  
+10. 图片 OCR 预览（无 Tesseract 时允许降级提示，不得整页白屏）  
+11. `POST /speech/evaluate` 返回 503 且 UI/网络不拖死主路径  
+12. 控制台无未捕获 JS 错误；关键 API 无 5xx（503 仅 speech）  
+
+**禁止：**
+
+- 用 `pytest` / `TestClient` 代替浏览器 `/qa`  
+- 双击 `static/index.html`（file://）冒充验收  
+- 服务未启动却宣称「网页可用」
+
+### E. `verification-before-completion` 铁律（全文约束）
+
+宣称「完成 / 已修 / 通过 / 可用」之前，**本回合必须亲自跑验证**并保存输出：
+
+```powershell
+# 1) 单测
+$env:PYTHONPATH = "$PWD\src"; pytest -v
+
+# 2) 实机（另开终端保持运行）
+.\scripts\start.ps1
+
+# 3) HTTP 探活（示例）
+Invoke-WebRequest http://127.0.0.1:8000/ui/ | Select-Object StatusCode
+Invoke-WebRequest http://127.0.0.1:8000/docs | Select-Object StatusCode
+```
+
+然后再跑 gstack `/qa`（A10）。三者缺一，完成声明无效。
+
+### F. `/ship` 合入前检查清单（全勾）
+
+- [ ] A9 verification-before-completion 证据齐全  
+- [ ] A10 `/qa` Standard（或用户书面降为 Quick）报告存在且 critical/high（及 Standard 的 medium）已清  
+- [ ] A12 `/review` 完成  
+- [ ] A8 全枝 code review 无未修 Important  
+- [ ] `pytest -v` 全绿  
+- [ ] 未引入第二份 Ollama；无公网裸端口默认文档  
+- [ ] OpenSpec change 与分支对应  
+- [ ] 跑 gstack `/ship`（或无远程时：`--no-ff` merge + 同上测试证据）  
+- [ ] A15 finishing 选项已由用户确认并执行  
+
+### G. 代理执行检查清单（每个 PR / 每枝）
+
+- [ ] 当前不在裸 `master` 上开发（除非 Task 13/14 docs-only 且已声明）  
+- [ ] 本枝 `pytest -v` 全绿  
+- [ ] 本枝若含 UI：A9+A10 已做  
+- [ ] 未跳过 TDD RED 证据（代码任务）  
+- [ ] Critical/Important 审查项已修并复审  
+- [ ] 准备合并：F 节全勾  
+
+### H. 明确不在本计划执行的项（仍须「点名排除」，不算遗漏）
+
+- gstack `/land-and-deploy`（无云部署）  
+- 自动 `git add CLAUDE.md && commit` 类 setup 副作用（未经用户要求禁止）  
+- 完整发音评测、华为上架、SRS、爬词、云同步（另计划）  
+
+### I. 历史债务（本仓库已实现代码 — 必须补跑）
+
+实现代理若发现 A9/A10/A12/A14 尚未对当前 `feat/*` 枝执行：
+
+1. **立刻**进入 Task 14，不得继续宣称可用  
+2. 将证据写入 `.gstack/qa-reports/` 与 `.superpowers/sdd/progress.md`  
+3. 修 `/qa` 发现的缺陷时走 `systematic-debugging`，每修一单测/复验  
 
 ---
 
@@ -1321,6 +1449,77 @@ git commit -m "docs: mark OpenSpec MVP tasks done and note follow-on plans"
 
 ---
 
+### Task 14: 质量门禁补全（verification + `/qa` + `/review` + `/ship` 准备）
+
+**Files:**
+- Create/Update: `.gstack/qa-reports/*`（`/qa` 产物）
+- Modify: `.superpowers/sdd/progress.md`（账本勾选 A9–A15）
+- Modify: 本计划复选框与缺陷修复代码（若 `/qa` 发现问题）
+- Create: `docs/superpowers/qa/2026-07-25-mvp-verification.md`（粘贴 pytest 摘要、启动命令、`/ui` 探活、`/qa` 结论）
+
+**Interfaces:**
+- Consumes: 已实现的 `create_app`、`scripts/start.ps1`、全量测试
+- Produces: 可审计的「网页可用」证据；合入许可
+
+**本任务强制技能顺序（不许跳）：**
+
+1. `superpowers:verification-before-completion`
+2. gstack `/qa`（默认 Standard；用户可书面降为 Quick，须记入报告）
+3. 若有缺陷：`superpowers:systematic-debugging` → 修复 → 回到 1–2
+4. gstack `/review`（`master..HEAD`）
+5. `superpowers:requesting-code-review` 终审差分（若实现期终审早于本任务，对 Task 14 修复再审一次）
+6. 用户确认后：gstack `/ship` + `superpowers:finishing-a-development-branch`
+
+- [ ] **Step 1: verification-before-completion — pytest**
+
+```powershell
+cd "D:\work\AI PROGRAME\es"
+$env:PYTHONPATH = "$PWD\src"
+pytest -v
+```
+
+Expected: 全部 PASSED。将最后摘要写入 `docs/superpowers/qa/2026-07-25-mvp-verification.md`。
+
+- [ ] **Step 2: verification — 实机启动**
+
+```powershell
+.\scripts\start.ps1
+```
+
+Expected: 日志出现 `Uvicorn running on http://127.0.0.1:8000`，无 traceback。
+
+- [ ] **Step 3: verification — HTTP 探活**
+
+```powershell
+(Invoke-WebRequest http://127.0.0.1:8000/ui/).StatusCode   # 200
+(Invoke-WebRequest http://127.0.0.1:8000/docs).StatusCode  # 200
+```
+
+- [ ] **Step 4: gstack `/qa` Standard**
+
+对 `http://127.0.0.1:8000/ui/` 执行「Quality Assurance Gates §D」十二条必测路径；修复 critical/high/medium；复验；报告落入 `.gstack/qa-reports/`。
+
+- [ ] **Step 5: gstack `/review`**
+
+审查 `git diff master...HEAD`；处理 ASK/Important。
+
+- [ ] **Step 6: 可选 `/design-review`**
+
+对 `/ui` 做一次视觉/体验结论（或书面「MVP 接受现状、无阻断」）。
+
+- [ ] **Step 7: 写验证报告并提交**
+
+```powershell
+git add docs/superpowers/qa .gstack/qa-reports
+git commit -m "docs: add MVP verification and QA evidence"
+```
+
+- [ ] **Step 8: 用户选择 finishing 选项后执行 `/ship` 或本地 `--no-ff` merge**
+
+未完成 Step 1–7 前，**禁止**宣称 MVP 可用、禁止合并 `master`。
+
+---
+
 ## Spec Coverage Checklist（自检）
 
 | 设计要求 | 对应任务 |
@@ -1334,9 +1533,10 @@ git commit -m "docs: mark OpenSpec MVP tasks done and note follow-on plans"
 | 背词 flashcard/mcq | T8 |
 | 两种托福词汇题型 | T9 |
 | 进度汇总 | T10 |
-| Web UI Windows | T12 |
+| Web UI Windows | T12 + T14 `/qa` |
 | 发音完整 / 华为 | 后续计划（本计划明确排除） |
 | Vision OCR 增强 | T7 Noop；完整增强归发音/后续小变更 |
+| Superpowers+GStack 质量门禁全文 | 「Quality Assurance Gates」A–I + Task 14 |
 
 ## Type / 命名一致性
 
@@ -1345,19 +1545,22 @@ git commit -m "docs: mark OpenSpec MVP tasks done and note follow-on plans"
 - 路由前缀与设计 §3.3 一致（API 无前缀；UI 在 `/ui`）
 - `AppError` + `ErrorBody` 统一错误
 - 分支：`feat/arch-foundation` → `feat/toefl-core` → `feat/ingest-ocr`
+- 完成定义：代码任务完成 **不等于** 产品可用；可用 = Task 14 全勾
 
 ---
 
 ## Execution Handoff
 
-实现前确认本文件末尾 `## GSTACK REVIEW REPORT` 为 CLEAR。  
+1. 实现：SDD/executing-plans（Task 0–13）  
+2. **必须**再跑 Task 14（A9–A15）；缺一不可宣称可用  
+3. 计划变更后：视情况重跑 `/plan-eng-review` 或 `/autoplan`，更新文末 REPORT  
 
-**Two execution options:**
+**Two execution options（实现阶段）：**
 
-1. **Subagent-Driven（推荐）** — 每任务一个新子代理，任务间审查；遵守 Git 分支映射  
-2. **Inline Execution** — 本会话 executing-plans；每枝合并点暂停  
+1. **Subagent-Driven（推荐）** — 每任务子代理 + 任务审；遵守 Git 分支映射  
+2. **Inline Execution** — executing-plans；每枝合并点暂停  
 
-**Which approach?**
+**当前债务：** 若代码已落在 `feat/ingest-ocr` 但 Task 14 未做 → **下一步只准执行 Task 14**，不得开新功能。
 
 ---
 
@@ -1365,15 +1568,18 @@ git commit -m "docs: mark OpenSpec MVP tasks done and note follow-on plans"
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | not run |
-| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | not run |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions accepted; 0 unresolved |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run (minimal /ui; optional before polish) |
-| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | not run |
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | deferred unless scope expands (Gate A3) |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | run with `/ship` adversarial path |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions accepted; QA gates added 2026-07-25 |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | REQUIRED before polish | Gate A3/A13 — run in Task 14 Step 6 if UI ships |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | start.ps1 added; re-run if DX changes |
+| Browser QA | `/qa` | Real UI verification | 0 | **REQUIRED** | Task 14 — was missing at first impl claim |
+| Diff Review | `/review` | Pre-merge code review | 0 | **REQUIRED** | Task 14 |
+| Ship | `/ship` | Land/PR gates | 0 | **REQUIRED** | after Task 14 Steps 1–7 |
 
-**Outside voice:** 未跑独立第二模型；结论仅基于本轮 eng review。
+**Outside voice:** 未跑独立第二模型；合入前随 `/ship` 补对抗审。
 
-**Accepted decisions (this review):**
+**Accepted decisions (eng review):**
 - Scope: keep full MVP features; split PRs via three sequential branches
 - Branch topology: `feat/arch-foundation` → `feat/toefl-core` → `feat/ingest-ocr`
 - Sessions: SQLite persistence + hard-gate restart tests
@@ -1383,7 +1589,9 @@ git commit -m "docs: mark OpenSpec MVP tasks done and note follow-on plans"
 - Static: mount `/ui`; `/` redirects; API unprefixed
 - Tests: empty plan 400; contextual skip no-example; `/ui` must not shadow API
 - OCR: `run_in_threadpool` / `asyncio.to_thread`
+- **QA (2026-07-25 addendum):** Superpowers + GStack quality gates A0–A17 + Task 14 are mandatory; pytest alone is not acceptance
 
-**VERDICT:** ENG CLEARED — ready to implement on feature branches per Git/GSTACK sections.
+**VERDICT:** ENG CLEARED for implementation design — **PRODUCT ACCEPTANCE NOT CLEARED until Task 14 (`/qa` + verification-before-completion + `/review` + `/ship`) completes.**
 
-NO UNRESOLVED DECISIONS
+**UNRESOLVED DECISIONS:**
+- Task 14 尚未完成（浏览器 `/qa`、合入前 `/review`/`/ship`）
