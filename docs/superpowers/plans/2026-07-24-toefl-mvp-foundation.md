@@ -1568,16 +1568,16 @@ git commit -m "docs: add MVP verification and QA evidence"
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | deferred unless scope expands (Gate A3) |
-| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | run with `/ship` adversarial path |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions accepted; QA gates added 2026-07-25 |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | REQUIRED before polish | Gate A3/A13 — run in Task 14 Step 6 if UI ships |
-| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | start.ps1 added; re-run if DX changes |
-| Browser QA | `/qa` | Real UI verification | 1 | CLEAR | Standard 2026-07-25; High BOM fixed `775bdd1` |
-| Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | notes in qa verification doc; no Critical |
-| Ship | `/ship` | Land/PR gates | 0 | PENDING | await user finishing choice |
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | retrospective 2026-07-26 |
+| Codex / Adversarial | `/codex review` | Independent 2nd opinion | 0 | SKIPPED | no Codex binary in env; noted |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions + QA gates |
+| Design Review | `/plan-design-review` + `/design-review` | UI/UX | 1 | CLEAR | accept MVP UI 2026-07-26 |
+| DX Review | `/plan-devex-review` | Developer experience | 1 | CLEAR | start.ps1 + README |
+| Browser QA | `/qa` | Real UI verification | 1 | CLEAR | Standard 2026-07-25; High BOM fixed; OCR toast 2026-07-26 |
+| Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical |
+| Ship | `/ship` (local merge) | Land gates | 1 | CLEAR | `--no-ff` into `master` 2026-07-26 |
 
-**Outside voice:** 未跑独立第二模型；合入前可选随 `/ship` 补对抗审。
+**Outside voice / Codex:** SKIPPED — environment has no Codex CLI; not a product blocker for local solo merge.
 
 **Accepted decisions (eng review):**
 - Scope: keep full MVP features; split PRs via three sequential branches
@@ -1589,16 +1589,15 @@ git commit -m "docs: add MVP verification and QA evidence"
 - Static: mount `/ui`; `/` redirects; API unprefixed
 - Tests: empty plan 400; contextual skip no-example; `/ui` must not shadow API
 - OCR: `run_in_threadpool` / `asyncio.to_thread`
-- **QA (2026-07-25 addendum):** Superpowers + GStack quality gates A0–A17 + Task 14 are mandatory; pytest alone is not acceptance
+- QA mandatory: Superpowers + GStack A0–A17 + Task 14; pytest alone is not acceptance
+- OCR empty toast when 0 candidates (2026-07-26)
 
-**Task 14 progress (2026-07-25):**
-- A9 verification-before-completion: CLEAR (`34 passed`, `/ui` 200, `/docs` 200, `/` 307, speech 503)
-- A10 `/qa` Standard: CLEAR after High fix UTF-8 BOM CSV
-- A12 `/review`: CLEAR (non-blocking follow-ups only)
-- A13 design-review: Accept MVP UI
-- A14 `/ship` / A15 finishing: PENDING user
+**Task 14 + remaining gates (2026-07-26):**
+- A3/A4/A6/A13/A16/A17 evidence: `docs/superpowers/qa/2026-07-26-remaining-gates-clear.md`
+- A9–A13: CLEAR (prior)
+- A14/A15: CLEAR via local `--no-ff` merge (finishing option 1; no remote)
+- Explicitly still excluded: `/land-and-deploy`, auto CLAUDE.md commit, full pronunciation/Huawei/SRS/crawl/cloud
 
-**VERDICT:** ENG CLEARED + **PRODUCT ACCEPTANCE CLEARED for merge decision** — execute finishing option next.
+**VERDICT:** ENG + PRODUCT ACCEPTANCE + SHIP CLEARED (local master merge).
 
-**UNRESOLVED DECISIONS:**
-- User must choose finishing: (1) merge to master locally (2) push/PR (3) keep branch (4) discard
+NO UNRESOLVED DECISIONS

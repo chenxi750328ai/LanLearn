@@ -256,7 +256,11 @@
       const data = await api("/ingest/image", { method: "POST", body: form });
       state.importCandidates = data.candidates;
       renderImportPreview({ candidates: data.candidates, failures: [] });
-      showToast(`OCR 解析 ${data.candidates.length} 条候选`);
+      if (!data.candidates.length) {
+        showToast("未识别到单词：请换清晰图片，或安装本机 Tesseract 后重试", true);
+      } else {
+        showToast(`OCR 解析 ${data.candidates.length} 条候选`);
+      }
     } catch (e) {
       showToast(e.message, true);
     }
