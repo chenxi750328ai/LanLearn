@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>托福学习</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="page-header">
+    <h1>托福学习</h1>
+    <p class="subtitle">建计划 → 背词 → 模考 → 看进度</p>
+  </header>
+
+  <main class="flow">
+    <section class="panel" id="plan-panel">
+      <h2>1. 创建计划</h2>
+      <div class="controls">
+        <label>
+          每日词量
+          <input type="number" id="daily-quota" value="5" min="1" max="50">
+        </label>
+        <button type="button" id="btn-create-plan">创建托福计划</button>
+      </div>
+      <div id="plan-info" class="info-box hidden"></div>
+    </section>
+
+    <section class="panel" id="study-panel">
+      <h2>2. 背词</h2>
+      <button type="button" id="btn-start-study" disabled>开始今日背词</button>
+      <div id="study-area" class="hidden">
+        <p class="word-prompt">请选择释义：</p>
+        <p class="word-text" id="study-word"></p>
+        <div id="study-options" class="options"></div>
+        <p id="study-feedback" class="feedback hidden"></p>
+      </div>
+    </section>
+
+    <section class="panel" id="exam-panel">
+      <h2>3. 模考</h2>
+      <button type="button" id="btn-start-exam" disabled>开始模考（2 题）</button>
+      <div id="exam-area" class="hidden">
+        <form id="exam-form"></form>
+        <button type="submit" form="exam-form" id="btn-submit-exam">提交答卷</button>
+      </div>
+      <div id="exam-result" class="info-box hidden"></div>
+    </section>
+
+    <section class="panel" id="progress-panel">
+      <h2>4. 学习进度</h2>
+      <button type="button" id="btn-refresh-progress">刷新进度</button>
+      <div id="progress-info" class="info-box hidden"></div>
+    </section>
+  </main>
+
+  <aside class="import-panel">
+    <h3>词库导入</h3>
+    <div class="controls">
+      <label>
+        CSV / TXT
+        <input type="file" id="import-file" accept=".csv,.txt,text/csv,text/plain">
+      </label>
+      <button type="button" id="btn-import-upload">上传预览</button>
+      <label>
+        图片 OCR
+        <input type="file" id="import-image" accept="image/*">
+      </label>
+      <button type="button" id="btn-import-image">OCR 预览</button>
+      <button type="button" id="btn-import-confirm" disabled>确认入库</button>
+    </div>
+    <div id="import-preview" class="info-box hidden"></div>
+  </aside>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
