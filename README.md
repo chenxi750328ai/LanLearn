@@ -29,9 +29,21 @@ API 文档: http://127.0.0.1:8000/docs
 
 ## 测试
 
+### L1/L2 — 单元 + API 集成（pytest）
+
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 pytest -v
 ```
 
-E2E 使用 `TestClient(create_app())`，不依赖模块级 `app`。
+`TestClient` 只覆盖集成层，**不能**代替系统验收。
+
+### L3 — 系统测（Playwright，必跑）
+
+```powershell
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+覆盖计划 §D 路径（建计划→背词→模考→进度、CSV、OCR 降级、speech 503）。宣称可用前与 gstack `/qa` 报告一并作为 A9/A10 证据。

@@ -6,7 +6,7 @@
 
 **Architecture:** FastAPI 模块化单体（`plans` / `lexicon` / `ingest` / `study` / `exam` / `progress` / `quiz` + `adapters/`）；UI 挂 `/ui`，API 无前缀；Tesseract OCR 经 threadpool；study/exam 会话持久化在 SQLite；默认在 **WSL** 跑 API 并复用已有 Ollama；手机外网经 **Tailscale** 访问（禁止公网裸端口）；本计划只留 `/speech/evaluate` 503 桩。
 
-**Tech Stack:** Python 3.11+、FastAPI、Uvicorn、Pydantic v2、SQLite（stdlib `sqlite3`）、httpx（测试）、pytest、Tesseract（系统依赖，测试用 Fake）、静态 Web（`static/` 无构建步）、Tailscale（外网组网，非代码依赖）
+**Tech Stack:** Python 3.11+、FastAPI、Uvicorn、Pydantic v2、SQLite（stdlib `sqlite3`）、httpx（测试）、pytest（L1/L2）、**Playwright / `@playwright/test`（L3 系统测，必选）**、Tesseract（系统依赖，测试用 Fake）、静态 Web（`static/` 无构建步）、Tailscale（外网组网，非代码依赖）
 
 ## Global Constraints
 
@@ -88,8 +88,8 @@ master                         # 仅合并后的可运行快照；禁止长期�
 | A6 | 单测纪律 | 每任务内 `superpowers:test-driven-development` | 报告含 RED→GREEN 证据（命令+关键输出） |
 | A7 | 任务级审 | SDD 内置 task-reviewer（spec + quality） | Spec PASS + Quality Approved；Critical/Important 已修并复审 |
 | A8 | 全枝代码审 | `superpowers:requesting-code-review`（终审模板） | 终审 Verdict 非「阻断」；Important 已修 |
-| A9 | **宣称可用前** | **`superpowers:verification-before-completion`（铁律）** | **同一轮消息内**跑通：`pytest -v` **且** 实机 `.\scripts\start.ps1`（或等价 uvicorn）**且** HTTP `200` 打开 `/ui/`；输出贴进报告 |
-| A10 | **浏览器 QA** | **gstack `/qa`（默认 Standard；至少 Quick）** | 报告目录 `.gstack/qa-reports/`（或约定路径）；关键路径已点通；发现的 critical/high（Standard 含 medium）已修并复验 |
+| A9 | **宣称可用前** | **`superpowers:verification-before-completion`（铁律）** | **同一轮消息内**跑通：`pytest -v`（L1/L2）**且** 实机起服探活；**且** `npm run test:e2e`（Playwright L3）全绿；输出贴进报告。缺 Playwright ≠ 完成 |
+| A10 | **浏览器 QA / 系统测** | **Playwright（仓库 `e2e/`）+ gstack `/qa`（默认 Standard）** | ① `npx playwright test` 覆盖 §D 路径且报告可复跑；② `.gstack/qa-reports/` 存在；critical/high（Standard 含 medium）已修并复验。**禁止**仅用 HTTP 探活或单次 MCP 点点勾掉 A10 |
 | A11 | 仅报告模式（可选替代一次） | gstack `/qa-only` | 仅当用户明确只要报告不要自动修时；之后仍须 `/qa` 闭环或人工修完再 A9 |
 | A12 | Diff 审 | gstack `/review` | 对 `master..HEAD`（或当前 feature 枝）有审查结论；ASK 项已处理 |
 | A13 | 视觉/体验（UI 有可见改动时必做） | gstack `/design-review` | 有结论或「本迭代无视觉变更」书面声明 |
@@ -128,7 +128,7 @@ master                         # 仅合并后的可运行快照；禁止长期�
 | `/plan-devex-review` | 开发者体验 | A3；启动脚本/本地 DX 大改时必做 |
 | `/autoplan` | CEO+Design+Eng+DX 串行 | A3；大范围重开计划时必做（可替代逐个 plan-*-review） |
 | `/review` | Diff 代码审查 | **A12 合入前必做** |
-| `/qa` | 浏览器测→修→再验 | **A10 宣称可用前必做**（默认 Standard） |
+| `/qa` | 浏览器测→修→再验 | **A10 宣称可用前必做**（默认 Standard）；**必须与 Playwright 套件并行**，不能互相替代勾销 |
 | `/qa-only` | 只出 QA 报告 | A11 可选；不能单独替代 A10 闭环 |
 | `/design-review` | 视觉打磨审 | A13；有可见 UI 时必做 |
 | `/ship` | 测+审+PR/上岸 | **A14 合入前必做** |
@@ -161,32 +161,39 @@ master                         # 仅合并后的可运行快照；禁止长期�
 
 **禁止：**
 
-- 用 `pytest` / `TestClient` 代替浏览器 `/qa`  
+- 用 `pytest` / `TestClient` 代替浏览器 `/qa` **或** Playwright  
+- 用单次 Cursor MCP 点击、或仅 `Invoke-WebRequest /ui/`，代替 `npm run test:e2e`  
 - 双击 `static/index.html`（file://）冒充验收  
-- 服务未启动却宣称「网页可用」
+- 服务未启动却宣称「网页可用」  
+- 仓库无 `e2e/` + Playwright 配置却将 A10 标 CLEAR  
+
+**工程交付物（A10 硬要件）：** `package.json`、`playwright.config.ts`、`e2e/**/*.spec.ts`；命令 `npm ci && npx playwright install chromium && npm run test:e2e`。
 
 ### E. `verification-before-completion` 铁律（全文约束）
 
 宣称「完成 / 已修 / 通过 / 可用」之前，**本回合必须亲自跑验证**并保存输出：
 
 ```powershell
-# 1) 单测
+# 1) L1/L2 单元+集成
 $env:PYTHONPATH = "$PWD\src"; pytest -v
 
-# 2) 实机（另开终端保持运行）
-.\scripts\start.ps1
+# 2) L3 系统测（Playwright 自带 webServer，勿用 TestClient 冒充）
+npm ci
+npx playwright install chromium
+npm run test:e2e
 
-# 3) HTTP 探活（示例）
+# 3) 实机探活（可选交叉检查；不能替代步骤 2）
+.\scripts\start.ps1
 Invoke-WebRequest http://127.0.0.1:8000/ui/ | Select-Object StatusCode
-Invoke-WebRequest http://127.0.0.1:8000/docs | Select-Object StatusCode
 ```
 
-然后再跑 gstack `/qa`（A10）。三者缺一，完成声明无效。
+然后再跑 gstack `/qa`（A10 报告）。**pytest + Playwright + `/qa` 报告** 缺一，完成声明无效。  
+遗漏 RCA：`docs/superpowers/qa/2026-07-26-browser-gate-omission-rca.md`。
 
 ### F. `/ship` 合入前检查清单（全勾）
 
-- [ ] A9 verification-before-completion 证据齐全  
-- [ ] A10 `/qa` Standard（或用户书面降为 Quick）报告存在且 critical/high（及 Standard 的 medium）已清  
+- [ ] A9 verification-before-completion 证据齐全（含 **`npm run test:e2e` 全绿**）  
+- [ ] A10 Playwright `e2e/` 入库 + `/qa` Standard 报告存在；critical/high（及 Standard 的 medium）已清  
 - [ ] A12 `/review` 完成  
 - [ ] A8 全枝 code review 无未修 Important  
 - [ ] `pytest -v` 全绿  
@@ -1495,9 +1502,19 @@ Expected: 日志出现 `Uvicorn running on http://127.0.0.1:8000`，无 tracebac
 (Invoke-WebRequest http://127.0.0.1:8000/docs).StatusCode  # 200
 ```
 
-- [ ] **Step 4: gstack `/qa` Standard**
+- [ ] **Step 4a: Playwright 系统测（硬门）**
 
-对 `http://127.0.0.1:8000/ui/` 执行「Quality Assurance Gates §D」十二条必测路径；修复 critical/high/medium；复验；报告落入 `.gstack/qa-reports/`。
+```powershell
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+Expected: `e2e/system.spec.ts` 全绿。无 `e2e/` 不得进入 Step 4b。
+
+- [ ] **Step 4b: gstack `/qa` Standard**
+
+对 `http://127.0.0.1:8000/ui/` 执行「Quality Assurance Gates §D」十二条必测路径（可与 Playwright 对照）；修复 critical/high/medium；复验；报告落入 `.gstack/qa-reports/`。**不得**用本步单独勾销 Playwright。
 
 - [ ] **Step 5: gstack `/review`**
 
@@ -1573,7 +1590,7 @@ git commit -m "docs: add MVP verification and QA evidence"
 | Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions + QA gates |
 | Design Review | `/plan-design-review` + `/design-review` | UI/UX | 1 | CLEAR | accept MVP UI 2026-07-26 |
 | DX Review | `/plan-devex-review` | Developer experience | 1 | CLEAR | start.ps1 + README |
-| Browser QA | `/qa` | Real UI verification | 1 | CLEAR | Standard 2026-07-25; High BOM fixed; OCR toast 2026-07-26 |
+| Browser QA | Playwright + `/qa` | Real UI / system tests | 2 | CLEAR (Playwright) | `e2e/` 5 passed 2026-07-26; prior markdown-only CLEAR invalidated (RCA); `/qa` report still valid as adjunct |
 | Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical |
 | Ship | `/ship` (local merge) | Land gates | 1 | CLEAR | `--no-ff` `17bb29e` into `master` 2026-07-26; pytest 34 passed |
 
