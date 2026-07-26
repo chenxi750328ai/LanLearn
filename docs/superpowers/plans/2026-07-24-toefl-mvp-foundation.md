@@ -1575,7 +1575,7 @@ git commit -m "docs: add MVP verification and QA evidence"
 | DX Review | `/plan-devex-review` | Developer experience | 1 | CLEAR | start.ps1 + README |
 | Browser QA | `/qa` | Real UI verification | 1 | CLEAR | Standard 2026-07-25; High BOM fixed; OCR toast 2026-07-26 |
 | Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical |
-| Ship | `/ship` (local merge) | Land gates | 1 | CLEAR | `--no-ff` into `master` 2026-07-26 |
+| Ship | `/ship` (local merge) | Land gates | 1 | CLEAR | `--no-ff` `17bb29e` into `master` 2026-07-26; pytest 34 passed |
 
 **Outside voice / Codex:** SKIPPED — environment has no Codex CLI; not a product blocker for local solo merge.
 
@@ -1595,7 +1595,7 @@ git commit -m "docs: add MVP verification and QA evidence"
 **Task 14 + remaining gates (2026-07-26):**
 - A3/A4/A6/A13/A16/A17 evidence: `docs/superpowers/qa/2026-07-26-remaining-gates-clear.md`
 - A9–A13: CLEAR (prior)
-- A14/A15: CLEAR via local `--no-ff` merge (finishing option 1; no remote)
+- A14/A15: CLEAR via local `--no-ff` merge `17bb29e` (finishing option 1; no remote)
 - Explicitly still excluded: `/land-and-deploy`, auto CLAUDE.md commit, full pronunciation/Huawei/SRS/crawl/cloud
 
 **VERDICT:** ENG + PRODUCT ACCEPTANCE + SHIP CLEARED (local master merge).

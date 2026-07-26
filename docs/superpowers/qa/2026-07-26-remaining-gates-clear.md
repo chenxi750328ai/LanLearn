@@ -64,7 +64,7 @@ Verdict: CLEAR.
 ## A14 `/ship` + A15 finishing
 - 无 remote → 本地 `git checkout master && git merge --no-ff feat/ingest-ocr`（finishing 选项 1）。
 - adversarial/codex：环境无独立 Codex 二进制 → skip with reason；不阻塞本地 merge。
-- 合并后：`pytest -v` 再绿；merge commit SHA 记入计划 REPORT / 本文件底部。
+- 合并完成：`17bb29e` (`git merge --no-ff feat/ingest-ocr`)；master 上 `pytest` **34 passed**。
 
 ## A5 progress ledger
 - 本地账本：`.superpowers/sdd/progress.md`（目录 gitignore；证据以本文件 + 计划 REPORT 为准入库）。
