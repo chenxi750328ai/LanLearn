@@ -1,6 +1,6 @@
 # Playwright system tests — 2026-07-26
 
-Branch: `feat/playwright-system-tests`
+Branch: merged to `master` via `0850bf7` (`feat/playwright-system-tests`)
 
 ## Command
 
