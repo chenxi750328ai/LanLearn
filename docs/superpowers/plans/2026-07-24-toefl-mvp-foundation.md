@@ -127,6 +127,9 @@ master                         # 仅合并后的可运行快照；禁止长期�
 | `/plan-design-review` | UI/UX 计划审 | A3；`/ui` 布局/交互大改前必做 |
 | `/plan-devex-review` | 开发者体验 | A3；启动脚本/本地 DX 大改时必做 |
 | `/autoplan` | CEO+Design+Eng+DX 串行 | A3；大范围重开计划时必做（可替代逐个 plan-*-review） |
+| `/land-and-deploy` | 云部署+生产探活 | **技能已装；对本产品禁止执行**（无云；见 §H） |
+| `/setup-deploy` | land 前置配置 | **技能已装；无云则不跑** |
+| `/canary` | 生产金丝雀 | **技能已装；无生产 URL 则不跑** |
 | `/review` | Diff 代码审查 | **A12 合入前必做** |
 | `/qa` | 浏览器测→修→再验 | **A10 宣称可用前必做**（默认 Standard）；**必须与 Playwright 套件并行**，不能互相替代勾销 |
 | `/qa-only` | 只出 QA 报告 | A11 可选；不能单独替代 A10 闭环 |
@@ -134,7 +137,7 @@ master                         # 仅合并后的可运行快照；禁止长期�
 | `/ship` | 测+审+PR/上岸 | **A14 合入前必做** |
 | `/investigate` | 难复现/深排障 | A17；若环境提供该 skill |
 | adversarial / `/codex review` | 对抗/第二模型 | 随 `/ship` 或 `/plan-*-review` 启用时必跟完；不可跳过其 P1 门禁 |
-| `/land-and-deploy` | 云部署 | **明确不做**（无云）；写入非目标即可 |
+| 全量清单 | 见 inventory 文档 | Windows+WSL 各 53 个 `gstack-*`（2026-07-27） |
 
 ### D. `/qa` 档位与本产品必测路径（不许少）
 
@@ -211,11 +214,37 @@ Invoke-WebRequest http://127.0.0.1:8000/ui/ | Select-Object StatusCode
 - [ ] Critical/Important 审查项已修并复审  
 - [ ] 准备合并：F 节全勾  
 
-### H. 明确不在本计划执行的项（仍须「点名排除」，不算遗漏）
+### H. 明确不在本产品**执行**的项（技能可装；执行禁止）
 
-- gstack `/land-and-deploy`（无云部署）  
+#### `/land-and-deploy` 为何不做（LanLearn / es）
+
+| 问 | 答 |
+|----|----|
+| 技能要不要装？ | **要装**（gstack 全量齐套）；装 ≠ 对本仓执行 |
+| 技能做什么？ | Merge PR → 等 CI → **部署到生产云** → 探活生产 URL（见 upstream `/land-and-deploy`） |
+| 为何本产品禁止执行？ | **没有云生产环境**：MVP 是本机 FastAPI + SQLite；外网手机入口约定为 **Tailscale**，不是公网托管/K8s/Vercel 等 |
+| 和 `/ship` 区别？ | `/ship` = 测+审+推远程/开 PR（**要做**）；`/land-and-deploy` = 合入后上云验证（**无云则无对象**） |
+| 何时才允许执行？ | 另开「云托管」计划，且完成 `/setup-deploy`（平台、生产 URL、部署命令）之后；**不得**在本计划内假装已 land |
+
+相关排除（同纪律）：
+
 - 自动 `git add CLAUDE.md && commit` 类 setup 副作用（未经用户要求禁止）  
 - 完整发音评测、华为上架、SRS、爬词、云同步（另计划）  
+- `/canary` 生产金丝雀：无生产 URL 时不做  
+
+### J. OpenSpec **归档门禁**（未满足禁止 `openspec archive` / `/opsx:archive`）
+
+对 `arch-foundation`、`toefl-vertical-slice`（及后续 change）归档前必须全勾：
+
+- [ ] **技能齐套：** Windows + WSL `gstack-*` ≥ 计划要求全量（见 `docs/superpowers/qa/2026-07-27-gstack-skills-inventory.md`，当前 53）  
+- [ ] **计划齐套：** 本文件 A–J 节与 REPORT 已反映真实状态（含 Playwright、远程 ship、land-and-deploy 排除理由）  
+- [ ] **质量三证：** 同回合 `pytest -v` + `npm run test:e2e` + `/qa` Standard 报告（`.gstack/qa-reports/`）  
+- [ ] **A12 `/review`：** 对将归档范围的 diff 有书面结论  
+- [ ] **A14：** 本地 merge 或 PR；有 remote 则已 push（或用户书面豁免）  
+- [ ] **无 Critical/High** 未修缺陷；Medium（Standard）已清或书面 defer  
+- [ ] change `tasks.md` 业务项全勾，且 **不得**在质量门禁未清时勾「已归档」
+
+**违反 = 流程失败：** 仅业务 Task 勾完、仅 pytest 绿、或 gstack 技能缺失时归档 → 无效，须重开质量补跑。
 
 ### I. 历史债务（本仓库已实现代码 — 必须补跑）
 
@@ -224,6 +253,7 @@ Invoke-WebRequest http://127.0.0.1:8000/ui/ | Select-Object StatusCode
 1. **立刻**进入 Task 14，不得继续宣称可用  
 2. 将证据写入 `.gstack/qa-reports/` 与 `.superpowers/sdd/progress.md`  
 3. 修 `/qa` 发现的缺陷时走 `systematic-debugging`，每修一单测/复验  
+4. **归档前**再跑 §J 全勾  
 
 ---
 
@@ -1614,8 +1644,10 @@ git commit -m "docs: add MVP verification and QA evidence"
 - A9–A13: CLEAR (prior)
 - A14/A15: local merge CLEAR；**remote push CLEAR**（2026-07-27 `origin/master` = `26c12a7`）
 - A9/A10 re-verified 2026-07-27: pytest 34 + Playwright 5 + live `/qa`
-- Explicitly still excluded: `/land-and-deploy`, auto CLAUDE.md commit, full pronunciation/Huawei/SRS/crawl/cloud
+- Explicitly still excluded **from execution**: `/land-and-deploy`（技能已装）、auto CLAUDE.md commit、full pronunciation/Huawei/SRS/crawl/cloud
+- gstack skills: **53** on Windows+WSL（`docs/superpowers/qa/2026-07-27-gstack-skills-inventory.md`）
+- **OpenSpec archive:** blocked until §J 全勾（计划+质量措施完备）
 
-**VERDICT:** ENG + PRODUCT ACCEPTANCE + SHIP CLEARED (local master merge).
+**VERDICT:** ENG + PRODUCT ACCEPTANCE + SHIP CLEARED (local+remote). **ARCHIVE not yet authorized** until §J checklist signed.
 
-NO UNRESOLVED DECISIONS
+NO UNRESOLVED DECISIONS (except archive wait on §J sign-off)
