@@ -91,11 +91,11 @@ master                         # 仅合并后的可运行快照；禁止长期�
 | A9 | **宣称可用前** | **`superpowers:verification-before-completion`（铁律）** | **同一轮消息内**跑通：`pytest -v`（L1/L2）**且** 实机起服探活；**且** `npm run test:e2e`（Playwright L3）全绿；输出贴进报告。缺 Playwright ≠ 完成 |
 | A10 | **浏览器 QA / 系统测** | **Playwright（仓库 `e2e/`）+ gstack `/qa`（默认 Standard）** | ① `npx playwright test` 覆盖 §D 路径且报告可复跑；② `.gstack/qa-reports/` 存在；critical/high（Standard 含 medium）已修并复验。**禁止**仅用 HTTP 探活或单次 MCP 点点勾掉 A10 |
 | A11 | 仅报告模式（可选替代一次） | gstack `/qa-only` | 仅当用户明确只要报告不要自动修时；之后仍须 `/qa` 闭环或人工修完再 A9 |
-| A12 | Diff 审 | gstack `/review` | 对 `master..HEAD`（或当前 feature 枝）有审查结论；ASK 项已处理 |
+| A12 | Diff 终审（合入前） | gstack `/review` | 对 **A10 之后最终 diff** 有结论；发现问题必须回改并重跑 A9/A10 相关项（见 §H3）。实现期 A7/A8 已审过，A12 不是第一次审 |
 | A13 | 视觉/体验（UI 有可见改动时必做） | gstack `/design-review` | 有结论或「本迭代无视觉变更」书面声明 |
-| A14 | 合入 | gstack `/ship`（含测、覆盖审计、预着陆审、对抗审；有远程则 PR） | 测试绿；覆盖门禁通过或用户显式 override；PR/本地 merge 完成 |
+| A14 | 合入 | gstack `/ship`（含测、覆盖审计、预着陆审、对抗审；有远程则 PR） | 测试绿；覆盖门禁通过或用户显式 override；PR/本地 merge 完成；**且**人类 H-AC-2 验收通过（见 §H2） |
 | A15 | 收尾 | `superpowers:finishing-a-development-branch` | 用户已选：合并 / PR / 保留 / 丢弃，并执行完毕 |
-| A16 | 审查意见回流 | `superpowers:receiving-code-review` | 若存在 PR/外部评论：逐条处理后再合 |
+| A16 | 审查意见回流 | `superpowers:receiving-code-review` | 有 PR/外部评论：分类→修复→回归测→回复；**禁止只定位不闭环**（见 §H4） |
 | A17 | 缺陷排查 | `superpowers:systematic-debugging`（及 gstack `/investigate` 若可用） | 用户报「打不开/坏了」时禁止瞎改；先复现再修 |
 
 ### B. Superpowers 技能全表（质量相关 — 本计划全部纳入门禁）
@@ -216,21 +216,67 @@ Invoke-WebRequest http://127.0.0.1:8000/ui/ | Select-Object StatusCode
 
 ### H. 明确不在本产品**执行**的项（技能可装；执行禁止）
 
-#### `/land-and-deploy` 为何不做（LanLearn / es）
+#### `/land-and-deploy` 与「本地部署」的区别（LanLearn / es）
+
+| 概念 | 是什么 | 本产品怎么做 |
+|------|--------|--------------|
+| **本地部署 / 本机上线** | 在本机（或 WSL）起 uvicorn、打开 `/ui`、Tailscale 进私网 | **要做** — 归 **A9 起服探活 + A10 `/qa` + Playwright**，不是 `/land-and-deploy` |
+| **gstack `/land-and-deploy`** | 上游语义：合 PR → 等 CI → **部署到已配置的生产托管环境** → 探活**生产 URL**（常配合 `/setup-deploy`） | **对本仓禁止执行** — 当前无 Vercel/K8s/云主机等「生产托管」目标 |
+
+**回答「本地部署算不算 land？」：算部署，但不算 `/land-and-deploy`。**  
+本地部署已由 A9/A10/Playwright 覆盖；`/land-and-deploy` 专指「有云/托管生产管线」的上岸。若将来本机常驻服务要单独定义「家庭 NAS / 单机 systemd」发布，另开计划，**仍不必**强行套 `/land-and-deploy`，除非你配置了与该 skill 匹配的 deploy 适配器。
 
 | 问 | 答 |
 |----|----|
-| 技能要不要装？ | **要装**（gstack 全量齐套）；装 ≠ 对本仓执行 |
-| 技能做什么？ | Merge PR → 等 CI → **部署到生产云** → 探活生产 URL（见 upstream `/land-and-deploy`） |
-| 为何本产品禁止执行？ | **没有云生产环境**：MVP 是本机 FastAPI + SQLite；外网手机入口约定为 **Tailscale**，不是公网托管/K8s/Vercel 等 |
-| 和 `/ship` 区别？ | `/ship` = 测+审+推远程/开 PR（**要做**）；`/land-and-deploy` = 合入后上云验证（**无云则无对象**） |
-| 何时才允许执行？ | 另开「云托管」计划，且完成 `/setup-deploy`（平台、生产 URL、部署命令）之后；**不得**在本计划内假装已 land |
+| 技能要不要装？ | **要装**；装 ≠ 对本仓执行上游云 land 流程 |
+| 和 `/ship` 区别？ | `/ship` = 测+审+推 Git（**要做**）；本地可用 = A9/A10；`/land-and-deploy` = 托管生产（**当前无对象**） |
+| 何时才允许跑 `/land-and-deploy`？ | 另开云托管计划 + `/setup-deploy` 完成之后 |
 
 相关排除（同纪律）：
 
 - 自动 `git add CLAUDE.md && commit` 类 setup 副作用（未经用户要求禁止）  
 - 完整发音评测、华为上架、SRS、爬词、云同步（另计划）  
-- `/canary` 生产金丝雀：无生产 URL 时不做  
+- `/canary`：无**托管生产 URL**时不做（本机 `/ui` 探活不算 canary）
+
+### H2. 人类（你）评审 SPEC 与验收用例 — 流程卡点
+
+代理跑 A0–A17 **不能替代**产品负责人签字。你的评审点：
+
+| 卡点 | 时机 | 你审什么 | 通过形态 |
+|------|------|----------|----------|
+| **H-SPEC-1** | A0 设计稿完成后、写大段代码前 | 产品 SPEC / design：范围、非目标、词库字段、题型 | 口头/书面「设计批准」 |
+| **H-SPEC-2** | A1 计划 + OpenSpec `proposal`/`specs` 落地后 | OpenSpec change 是否覆盖 OR；验收是否可测 | 「SPEC/计划批准」 |
+| **H-AC-1** | A2 `/plan-eng-review` 后、大规模实现前 | §D 十二条 + Playwright 用例是否等于你要的验收 | 「验收用例批准」 |
+| **H-AC-2** | A10 `/qa` + Playwright 绿之后、A14 ship 前 | 对照批准的验收用例看证据（报告+本机点验） | 「验收通过」或打回修 |
+| **H-ARCH** | §J 归档前 | 是否允许 OpenSpec archive | 「允许归档」 |
+
+**默认：** 未做 H-SPEC-1/2、H-AC-1 不得宣称「按 SPEC 做完」；未做 H-AC-2 不得 `/ship` 宣称产品可用。
+
+### H3. A12 为何写在 A10 之后（顺序含义）
+
+```text
+实现期：A7 任务审 + A8 全枝审（可早于 QA）
+宣称可用前：A9 三层测 → A10 浏览器/系统测（含修缺陷）
+合入前终审：A12 /review（审的是「测完并修好之后」的最终 diff）
+然后：A14 /ship
+```
+
+- **A10 在 A12 前：** 先用真系统测把 Critical/High/Medium 修掉，避免终审的是「已知坏 UI」的旧 diff。  
+- **A12 不是第一次审代码：** A7/A8 已在实现中审过；A12 是 **ship 前对最终差分的再确认**。  
+- **若 A12 发现问题：** 必须回到改代码 → 重跑 A9/A10（相关用例）→ 再 A12，**禁止**只记笔记就 ship。
+
+### H4. A16 有问题之后走什么（不是只定位）
+
+`receiving-code-review` = **消化外部/PR 评论并闭环**，不是「只标个 bug 位置」。
+
+```text
+收到评论 → 分类（必改/可延/误解）
+  → 必改：改代码（A6 TDD）→ A9 相关测 → 必要时 A10 → 回复评论
+  → 若评论否定 SPEC/范围：回到 H-SPEC / A3，而不是偷偷改实现糊弄
+  → 全部必改关闭后才允许合入/继续 ship
+```
+
+**禁止：** A16 只写「已定位」不做修复与回归；或跳过测试直接合入。
 
 ### J. OpenSpec **归档门禁**（未满足禁止 `openspec archive` / `/opsx:archive`）
 
