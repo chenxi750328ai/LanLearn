@@ -1,26 +1,21 @@
 # OpenSpec archive readiness — 2026-07-27
 
-**规则：** 未满足计划 §J 全勾前，**禁止** `openspec archive` / 归档 `arch-foundation`、`toefl-vertical-slice`。
+**规则：** 未满足计划 §J 全勾前，**禁止** `openspec archive`。
 
 ## §J 勾选（归档前）
 
-- [x] 技能齐套：Win+WSL `gstack-*` = 53（inventory 文档）
-- [x] 计划齐套：A–J 已写 land-and-deploy 理由、Playwright、远程 ship、归档门禁
-- [x] 质量三证：pytest 34 + Playwright 5 + `/qa`（见 `2026-07-27-full-quality-gates.md`）
-- [x] A12 review：Playwright 合入差分已审（同文件）
-- [x] A14：local merge + `origin/master` push（`7eac021` 起）
-- [x] 无未修 Critical/High（OCR toast 已补）
-- [ ] **用户书面确认「允许归档」** ← 最后一闸；未确认不得 archive
+- [x] 技能齐套：Win+WSL `gstack-*` = 53
+- [x] 计划齐套：A–J + §H2 人类卡点 + land≠local + A12/A16 澄清
+- [x] 质量三证：pytest 34 + Playwright 5 + `/ui` 200（`2026-07-27-plan-refresh-reexec.md`）
+- [x] A2 eng-review #2 CLEAR（计划 REPORT）
+- [x] A12 解释用户同意
+- [x] A14 remote push 已通
+- [x] 无未修 Critical/High
+- [x] **用户书面确认「允许归档」** — 2026-07-27「如果要重执行，就重执行，再归档」
 
-## `/land-and-deploy` 摘要
+## 归档
 
-装了技能，但不对本产品执行：无云生产、无 `/setup-deploy` 目标；本机+Tailscale ≠ land-and-deploy。
-
-## 归档命令（仅用户确认后）
-
-```powershell
-openspec archive arch-foundation
-openspec archive toefl-vertical-slice
+```text
+openspec archive arch-foundation -y
+openspec archive toefl-vertical-slice -y
 ```
-
-（以本机 OpenSpec CLI 实际子命令为准。）

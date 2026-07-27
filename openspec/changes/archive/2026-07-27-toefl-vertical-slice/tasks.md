@@ -9,7 +9,7 @@
 - [x] 最小 Web UI（Task 12）
 - [x] ingest 文件/OCR（ingest-ocr 枝）
 
-## Archive gate（计划 §J — 未全勾禁止 archive）
+## Archive gate（计划 §J）
 - [x] gstack 技能 Win+WSL 齐套
 - [x] Playwright L3 + `/qa` + pytest
-- [ ] 用户确认允许归档（见 `docs/superpowers/qa/2026-07-27-openspec-archive-gate.md`）
+- [x] 用户确认允许归档（2026-07-27 重执行后归档）

@@ -1663,37 +1663,28 @@ git commit -m "docs: add MVP verification and QA evidence"
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | retrospective 2026-07-26 |
 | Codex / Adversarial | `/codex review` | Independent 2nd opinion | 0 | SKIPPED | no Codex binary in env; noted |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 11 decisions + QA gates |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | **2** | CLEAR | 2026-07-27 re-review after plan refresh (§H–H4, human gates, land≠local) |
 | Design Review | `/plan-design-review` + `/design-review` | UI/UX | 1 | CLEAR | accept MVP UI 2026-07-26 |
 | DX Review | `/plan-devex-review` | Developer experience | 1 | CLEAR | start.ps1 + README |
-| Browser QA | Playwright + `/qa` | Real UI / system tests | 2 | CLEAR (Playwright) | `e2e/` 5 passed 2026-07-26; prior markdown-only CLEAR invalidated (RCA); `/qa` report still valid as adjunct |
-| Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical |
-| Ship | `/ship` | Land gates | 2 | CLEAR | local merge + **origin/master pushed** 2026-07-27 (`26c12a7`) |
+| Browser QA | Playwright + `/qa` | Real UI / system tests | **3** | CLEAR | re-exec 2026-07-27: Playwright 5 + `/ui` 200 |
+| Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical; A12-after-A10 **user agreed** 2026-07-27 |
+| Ship | `/ship` | Land gates | 2 | CLEAR | local+remote; HEAD advancing with docs |
 
-**Outside voice / Codex:** SKIPPED — environment has no Codex CLI; not a product blocker for local solo merge.
+**Outside voice / Codex:** SKIPPED — no Codex CLI; not a blocker.
 
-**Accepted decisions (eng review):**
-- Scope: keep full MVP features; split PRs via three sequential branches
-- Branch topology: `feat/arch-foundation` → `feat/toefl-core` → `feat/ingest-ocr`
-- Sessions: SQLite persistence + hard-gate restart tests
-- Runtime: default API in WSL; `ES_BIND` default 127.0.0.1
-- Phone WAN: Tailscale only; no bare port-forward; no cloud API host in this plan
-- DRY: shared `quiz.distractors`
-- Static: mount `/ui`; `/` redirects; API unprefixed
-- Tests: empty plan 400; contextual skip no-example; `/ui` must not shadow API
-- OCR: `run_in_threadpool` / `asyncio.to_thread`
-- QA mandatory: Superpowers + GStack A0–A17 + Task 14; pytest alone is not acceptance
-- OCR empty toast when 0 candidates (2026-07-26)
+**Eng review #2 decisions (2026-07-27 plan refresh — HOLD SCOPE on product):**
+1. **Re-exec scope:** 不重做 Task 0–13 业务实现；**必须**重跑 A2 eng-review + A9/A10 三证后再归档  
+2. **Local deploy ≠ `/land-and-deploy`:** 本机起服归 A9/A10；land skill 仅云/托管生产（装而不对本仓执行）— ACCEPTED  
+3. **A12 after A10:** 终审最终 diff；A7/A8 为实现期审 — **用户同意**  
+4. **A16:** 闭环改码+回归，禁止只定位 — ACCEPTED  
+5. **Human gates §H2:** H-SPEC / H-AC / H-ARCH 为人审卡点；本次「再归档」= **H-ARCH 书面授权**  
+6. Architecture/data/tests from eng review #1: **unchanged**
 
-**Task 14 + remaining gates (2026-07-26):**
-- A3/A4/A6/A13/A16/A17 evidence: `docs/superpowers/qa/2026-07-26-remaining-gates-clear.md`
-- A9–A13: CLEAR (prior)
-- A14/A15: local merge CLEAR；**remote push CLEAR**（2026-07-27 `origin/master` = `26c12a7`）
-- A9/A10 re-verified 2026-07-27: pytest 34 + Playwright 5 + live `/qa`
-- Explicitly still excluded **from execution**: `/land-and-deploy`（技能已装）、auto CLAUDE.md commit、full pronunciation/Huawei/SRS/crawl/cloud
-- gstack skills: **53** on Windows+WSL（`docs/superpowers/qa/2026-07-27-gstack-skills-inventory.md`）
-- **OpenSpec archive:** blocked until §J 全勾（计划+质量措施完备）
+**Accepted decisions (eng review #1 — still in force):**  
+(prior list: branches, SQLite sessions, Tailscale, distractors, `/ui`, QA mandatory, Playwright, OCR toast, gstack 53, …)
 
-**VERDICT:** ENG + PRODUCT ACCEPTANCE + SHIP CLEARED (local+remote). **ARCHIVE not yet authorized** until §J checklist signed.
+**Re-exec evidence (2026-07-27):** `docs/superpowers/qa/2026-07-27-plan-refresh-reexec.md`
 
-NO UNRESOLVED DECISIONS (except archive wait on §J sign-off)
+**VERDICT:** ENG CLEARED (run 2) + PRODUCT ACCEPTANCE + SHIP CLEARED + **ARCHIVE AUTHORIZED** (user: 重执行后归档).
+
+NO UNRESOLVED DECISIONS
