@@ -1592,7 +1592,7 @@ git commit -m "docs: add MVP verification and QA evidence"
 | DX Review | `/plan-devex-review` | Developer experience | 1 | CLEAR | start.ps1 + README |
 | Browser QA | Playwright + `/qa` | Real UI / system tests | 2 | CLEAR (Playwright) | `e2e/` 5 passed 2026-07-26; prior markdown-only CLEAR invalidated (RCA); `/qa` report still valid as adjunct |
 | Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical |
-| Ship | `/ship` (local merge) | Land gates | 1 | CLEAR local / **OPEN remote** | local `--no-ff` ok; **GitHub push blocked — no PAT in agent env** (2026-07-27) |
+| Ship | `/ship` | Land gates | 2 | CLEAR | local merge + **origin/master pushed** 2026-07-27 (`26c12a7`) |
 
 **Outside voice / Codex:** SKIPPED — environment has no Codex CLI; not a product blocker for local solo merge.
 
@@ -1612,7 +1612,7 @@ git commit -m "docs: add MVP verification and QA evidence"
 **Task 14 + remaining gates (2026-07-26):**
 - A3/A4/A6/A13/A16/A17 evidence: `docs/superpowers/qa/2026-07-26-remaining-gates-clear.md`
 - A9–A13: CLEAR (prior)
-- A14/A15: local merge CLEAR；**remote push OPEN（无 PAT）** — 见 `docs/superpowers/qa/2026-07-27-full-quality-gates.md`
+- A14/A15: local merge CLEAR；**remote push CLEAR**（2026-07-27 `origin/master` = `26c12a7`）
 - A9/A10 re-verified 2026-07-27: pytest 34 + Playwright 5 + live `/qa`
 - Explicitly still excluded: `/land-and-deploy`, auto CLAUDE.md commit, full pronunciation/Huawei/SRS/crawl/cloud
 
