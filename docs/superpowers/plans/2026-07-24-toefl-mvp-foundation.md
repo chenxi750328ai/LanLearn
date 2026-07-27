@@ -1592,7 +1592,7 @@ git commit -m "docs: add MVP verification and QA evidence"
 | DX Review | `/plan-devex-review` | Developer experience | 1 | CLEAR | start.ps1 + README |
 | Browser QA | Playwright + `/qa` | Real UI / system tests | 2 | CLEAR (Playwright) | `e2e/` 5 passed 2026-07-26; prior markdown-only CLEAR invalidated (RCA); `/qa` report still valid as adjunct |
 | Diff Review | `/review` | Pre-merge code review | 1 | CLEAR | no Critical |
-| Ship | `/ship` (local merge) | Land gates | 1 | CLEAR | `--no-ff` `17bb29e` into `master` 2026-07-26; pytest 34 passed |
+| Ship | `/ship` (local merge) | Land gates | 1 | CLEAR local / **OPEN remote** | local `--no-ff` ok; **GitHub push blocked — no PAT in agent env** (2026-07-27) |
 
 **Outside voice / Codex:** SKIPPED — environment has no Codex CLI; not a product blocker for local solo merge.
 
