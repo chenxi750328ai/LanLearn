@@ -1612,7 +1612,8 @@ git commit -m "docs: add MVP verification and QA evidence"
 **Task 14 + remaining gates (2026-07-26):**
 - A3/A4/A6/A13/A16/A17 evidence: `docs/superpowers/qa/2026-07-26-remaining-gates-clear.md`
 - A9–A13: CLEAR (prior)
-- A14/A15: CLEAR via local `--no-ff` merge `17bb29e` (finishing option 1; no remote)
+- A14/A15: local merge CLEAR；**remote push OPEN（无 PAT）** — 见 `docs/superpowers/qa/2026-07-27-full-quality-gates.md`
+- A9/A10 re-verified 2026-07-27: pytest 34 + Playwright 5 + live `/qa`
 - Explicitly still excluded: `/land-and-deploy`, auto CLAUDE.md commit, full pronunciation/Huawei/SRS/crawl/cloud
 
 **VERDICT:** ENG + PRODUCT ACCEPTANCE + SHIP CLEARED (local master merge).
